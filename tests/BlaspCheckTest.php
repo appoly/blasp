@@ -239,11 +239,17 @@ class BlaspCheckTest extends TestCase
 
     public function test_word_boudary()
     {
+        // Pure alphabetic embedding without obfuscation is treated as a regular word
+        // to prevent false positives (e.g. "spac" in "space")
         $result =  $this->blaspService->check('afuckb');
+        $this->assertFalse($result->hasProfanity);
+
+        // Obfuscated variants are still caught
+        $result =  $this->blaspService->check('a f u c k b');
         $this->assertTrue($result->hasProfanity);
-        $this->assertSame(1, $result->profanitiesCount);
-        $this->assertCount(1, $result->uniqueProfanitiesFound);
-        $this->assertSame('a****b', $result->cleanString);
+
+        $result =  $this->blaspService->check('af@ckb');
+        $this->assertTrue($result->hasProfanity);
     }
 
     public function test_pural_profanity()
@@ -369,6 +375,34 @@ class BlaspCheckTest extends TestCase
     {
         // "@ss" should be detected as intentional obfuscation
         $result = $this->blaspService->check('This has @ss in it');
+        $this->assertTrue($result->hasProfanity);
+    }
+
+    public function test_no_false_positive_space_words()
+    {
+        // Words containing the profanity substring "spac" should not be flagged
+        $words = [
+            'This product provides ample space for storage.',
+            'The spacious design offers great workspace.',
+            'Perfect for aerospace applications.',
+            'Use the backspace key to delete.',
+            'The spacecraft landed safely.',
+        ];
+
+        foreach ($words as $sentence) {
+            $result = $this->blaspService->check($sentence);
+            $this->assertFalse(
+                $result->hasProfanity,
+                "\"$sentence\" should not be flagged but got: " . implode(', ', $result->uniqueProfanitiesFound)
+            );
+        }
+
+        // The actual profanity "spac" standalone should still be caught
+        $result = $this->blaspService->check('you spac');
+        $this->assertTrue($result->hasProfanity);
+
+        // Obfuscated forms should still be caught
+        $result = $this->blaspService->check('you sp@c');
         $this->assertTrue($result->hasProfanity);
     }
 }

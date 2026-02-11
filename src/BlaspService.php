@@ -294,6 +294,11 @@ class BlaspService
         $workingCleanString = $this->cleanString;
         $normalizedString = $this->stringNormalizer->normalize($workingCleanString);
 
+        // Preserve the original normalized string for full-word context lookups.
+        // Masking replaces characters with *, which breaks word boundaries and can
+        // cause the pure-alpha-substring check to miss compound profanity.
+        $originalNormalized = preg_replace('/\s+/', ' ', $normalizedString);
+
         // Loop through until no more profanities are detected
         while ($continue) {
             $continue = false;
@@ -322,6 +327,16 @@ class BlaspService
 
                         // Use boundaries to extract the full word around the match
                         $fullWord = $this->getFullWordContext($normalizedString, $start, $length);
+
+                        // If the match is purely alphabetic and is a substring of a larger
+                        // alphabetic word, it's a legitimate word — not obfuscated profanity
+                        // e.g. "spac" inside "space", "ass" inside "class"
+                        // Use the original unmasked string for context so that masking
+                        // doesn't break compound profanity detection.
+                        $originalFullWord = $this->getFullWordContext($originalNormalized, $start, $length);
+                        if ($this->isPureAlphaSubstring($matchedText, $originalFullWord, $profanity)) {
+                            continue;
+                        }
 
                         // Check if the full word (in lowercase) is in the false positives list
                         if ($this->profanityDetector->isFalsePositive($fullWord)) {
@@ -499,6 +514,76 @@ class BlaspService
 
         // Standalone partial spacing = intentional obfuscation
         return false;
+    }
+
+    /**
+     * Check if the matched text is a purely alphabetic substring of a larger
+     * purely alphabetic word, indicating a likely false positive.
+     *
+     * This catches cases like "spac" inside "space" or "ass" inside "class"
+     * without needing to enumerate every false positive word.
+     *
+     * Obfuscated profanity (e.g. "sp@c", "s-p-a-c") contains non-alpha
+     * characters and will NOT be skipped by this check.
+     *
+     * Conjugated profanity (e.g. "fuckings" = "fucking" + "s") and compound
+     * profanity (e.g. "cuntfuck") are also NOT skipped.
+     *
+     * @param string $matchedText The text that matched the profanity pattern
+     * @param string $fullWord The full word context surrounding the match
+     * @param string $profanityKey The base profanity word from the list
+     * @return bool
+     */
+    private function isPureAlphaSubstring(string $matchedText, string $fullWord, string $profanityKey): bool
+    {
+        // Only applies if the matched text is entirely alphabetic (no obfuscation)
+        if (!preg_match('/^[a-zA-Z]+$/', $matchedText)) {
+            return false;
+        }
+
+        // Only applies if the surrounding word is also entirely alphabetic
+        if (!preg_match('/^[a-zA-Z]+$/', $fullWord)) {
+            return false;
+        }
+
+        // Not embedded if same length (standalone word)
+        if (strlen($fullWord) <= strlen($matchedText)) {
+            return false;
+        }
+
+        // If the match is longer than the profanity key, it contains repeated
+        // characters — this is obfuscation, not a regular word (e.g. "ccuunntt" for "cunt")
+        if (strlen($matchedText) > strlen($profanityKey)) {
+            return false;
+        }
+
+        $matchLower = strtolower($matchedText);
+        $wordLower = strtolower($fullWord);
+
+        // Check if the full word is the profanity with a common suffix
+        // e.g. "fuckings" = "fucking" + "s" — this is conjugated profanity, not a false positive
+        $suffixes = ['s', 'es', 'ed', 'er', 'ers', 'est', 'ing', 'ings', 'ly', 'y'];
+
+        foreach ($suffixes as $suffix) {
+            if ($wordLower === $matchLower . $suffix) {
+                return false;
+            }
+        }
+
+        // Check if the remainder (full word minus the match) contains another
+        // known profanity — this indicates compound profanity like "cuntfuck"
+        $pos = strpos($wordLower, $matchLower);
+        if ($pos !== false) {
+            $remainder = substr($wordLower, 0, $pos) . substr($wordLower, $pos + strlen($matchLower));
+            foreach ($this->profanityDetector->getProfanityExpressions() as $profanity => $_) {
+                if (strlen($profanity) >= 3 && stripos($remainder, $profanity) !== false) {
+                    return false;
+                }
+            }
+        }
+
+        // The match is embedded in a larger regular word (e.g., "spac" in "space")
+        return true;
     }
 
     /**
