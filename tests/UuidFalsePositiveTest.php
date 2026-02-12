@@ -2,7 +2,7 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Facades\Blasp;
+use Blaspsoft\Blasp\Laravel\Facade as Blasp;
 
 class UuidFalsePositiveTest extends TestCase
 {
@@ -45,14 +45,12 @@ class UuidFalsePositiveTest extends TestCase
 
     public function test_short_hex_does_not_suppress_profanity()
     {
-        // Short hex token (< 8 chars) should not be suppressed
         $result = Blasp::check('800b');
         $this->assertTrue($result->hasProfanity());
     }
 
     public function test_pure_letter_hex_does_not_suppress_profanity()
     {
-        // Pure-letter hex has no digits, so the guard should not activate
         $result = Blasp::check('fuck deadbeef');
         $this->assertTrue($result->hasProfanity());
         $this->assertContains('fuck', $result->getUniqueProfanitiesFound());
@@ -60,7 +58,6 @@ class UuidFalsePositiveTest extends TestCase
 
     public function test_md5_hash_not_flagged()
     {
-        // MD5 containing "a55" (ass) — should not flag
         $result = Blasp::check('a55e7b3f9c1d2e4f8a0b1c2d3e4f5a6b');
         $this->assertFalse($result->hasProfanity());
     }

@@ -2,13 +2,12 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Facades\Blasp;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Blaspsoft\Blasp\Laravel\Facade as Blasp;
 
 class Issue32FalsePositiveTest extends TestCase
 {
-    /**
-     * @dataProvider legitimateWordsProvider
-     */
+    #[DataProvider('legitimateWordsProvider')]
     public function test_legitimate_words_not_flagged(string $word)
     {
         $result = Blasp::check($word);

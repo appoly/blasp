@@ -2,16 +2,16 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Normalizers\SpanishStringNormalizer;
+use Blaspsoft\Blasp\Core\Normalizers\SpanishNormalizer;
 
 class SpanishStringNormalizerTest extends TestCase
 {
-    private SpanishStringNormalizer $normalizer;
+    private SpanishNormalizer $normalizer;
 
     public function setUp(): void
     {
         parent::setUp();
-        $this->normalizer = new SpanishStringNormalizer();
+        $this->normalizer = new SpanishNormalizer();
     }
 
     public function test_normalize_accented_vowels()
@@ -37,14 +37,13 @@ class SpanishStringNormalizerTest extends TestCase
 
     public function test_normalize_double_r()
     {
-        $this->assertEquals('pero', $this->normalizer->normalize('perro')); // rr becomes r
-        $this->assertEquals('caro', $this->normalizer->normalize('carro')); // Should become single 'r'
+        $this->assertEquals('pero', $this->normalizer->normalize('perro'));
+        $this->assertEquals('caro', $this->normalizer->normalize('carro'));
         $this->assertEquals('RUN', $this->normalizer->normalize('RRUN'));
     }
 
     public function test_normalize_spanish_profanity_variants()
     {
-        // Test basic accent removal
         $this->assertEquals('mierda', $this->normalizer->normalize('miérda'));
         $this->assertEquals('cabron', $this->normalizer->normalize('cabrón'));
         $this->assertEquals('joder', $this->normalizer->normalize('jodér'));

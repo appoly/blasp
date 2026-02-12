@@ -2,243 +2,127 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Config\ConfigurationLoader;
-use Blaspsoft\Blasp\Config\DetectionConfig;
-use Blaspsoft\Blasp\Config\MultiLanguageDetectionConfig;
-use Blaspsoft\Blasp\Contracts\ExpressionGeneratorInterface;
+use Blaspsoft\Blasp\Core\Dictionary;
 use Illuminate\Support\Facades\Cache;
 
 class ConfigurationLoaderTest extends TestCase
 {
-    private ConfigurationLoader $loader;
-    private ExpressionGeneratorInterface $mockExpressionGenerator;
-
     public function setUp(): void
     {
         parent::setUp();
-        
-        $this->mockExpressionGenerator = $this->createMock(ExpressionGeneratorInterface::class);
-        $this->mockExpressionGenerator->method('generateExpressions')->willReturn([]);
-        
-        $this->loader = new ConfigurationLoader($this->mockExpressionGenerator);
-        
-        // Clear cache before each test
+        $this->app['config']->set('cache.default', 'array');
         Cache::flush();
     }
 
-    public function test_load_returns_detection_config()
+    public function test_for_language_returns_dictionary()
     {
-        $config = $this->loader->load();
-        
-        $this->assertInstanceOf(DetectionConfig::class, $config);
-        $this->assertIsArray($config->getProfanities());
-        $this->assertIsArray($config->getFalsePositives());
+        $dictionary = Dictionary::forLanguage('english');
+
+        $this->assertInstanceOf(Dictionary::class, $dictionary);
+        $this->assertIsArray($dictionary->getProfanities());
+        $this->assertIsArray($dictionary->getFalsePositives());
     }
 
-    public function test_load_with_custom_profanities()
+    public function test_dictionary_has_profanity_expressions()
     {
-        $customProfanities = ['custom', 'profanities'];
-        $customFalsePositives = ['custom', 'false', 'positives'];
-        
-        $config = $this->loader->load($customProfanities, $customFalsePositives);
-        
-        $this->assertEquals($customProfanities, $config->getProfanities());
-        $this->assertEquals($customFalsePositives, $config->getFalsePositives());
+        $dictionary = Dictionary::forLanguage('english');
+        $expressions = $dictionary->getProfanityExpressions();
+
+        $this->assertIsArray($expressions);
+        $this->assertNotEmpty($expressions);
+        $this->assertArrayHasKey('fuck', $expressions);
+        $this->assertArrayHasKey('shit', $expressions);
     }
 
-    public function test_load_multi_language_returns_multi_language_config()
+    public function test_for_languages_returns_multi_language_dictionary()
     {
-        $languageData = [
-            'english' => [
-                'profanities' => ['bad', 'evil'],
-                'false_positives' => ['class']
-            ],
-            'spanish' => [
-                'profanities' => ['malo'],
-                'false_positives' => ['clase']
-            ]
-        ];
-        
-        $config = $this->loader->loadMultiLanguage($languageData, 'spanish');
-        
-        $this->assertInstanceOf(MultiLanguageDetectionConfig::class, $config);
-        $this->assertEquals('spanish', $config->getCurrentLanguage());
-        $this->assertEquals(['english', 'spanish'], $config->getAvailableLanguages());
+        $dictionary = Dictionary::forLanguages(['english', 'spanish']);
+
+        $profanities = $dictionary->getProfanities();
+        $this->assertContains('fuck', $profanities);
+        $this->assertContains('mierda', $profanities);
     }
 
-    public function test_load_multi_language_with_empty_data_uses_config()
+    public function test_for_all_languages_returns_all_language_dictionary()
     {
-        $config = $this->loader->loadMultiLanguage();
-        
-        $this->assertInstanceOf(MultiLanguageDetectionConfig::class, $config);
-        $this->assertEquals('english', $config->getCurrentLanguage());
-        $this->assertContains('english', $config->getAvailableLanguages());
+        $dictionary = Dictionary::forAllLanguages();
+
+        $profanities = $dictionary->getProfanities();
+        $this->assertContains('fuck', $profanities);
+        $this->assertContains('mierda', $profanities);
+        $this->assertContains('merde', $profanities);
+        $this->assertContains('scheiße', $profanities);
     }
 
-    public function test_configuration_is_cached()
+    public function test_allow_list_removes_words()
     {
-        // Load configuration first time
-        $config1 = $this->loader->load(['test'], ['false_positive']);
-        
-        // Mock the expression generator to return different results
-        $mockGenerator2 = $this->createMock(ExpressionGeneratorInterface::class);
-        $mockGenerator2->method('generateExpressions')->willReturn(['different' => 'result']);
-        
-        // Create a new loader with different generator
-        $loader2 = new ConfigurationLoader($mockGenerator2);
-        
-        // Load configuration second time - should come from cache
-        $config2 = $loader2->load(['test'], ['false_positive']);
-        
-        // Both configs should have the same data (from cache)
-        $this->assertEquals($config1->getProfanities(), $config2->getProfanities());
-        $this->assertEquals($config1->getFalsePositives(), $config2->getFalsePositives());
+        $dictionary = Dictionary::forLanguage('english', ['allow' => ['fuck']]);
+
+        $this->assertNotContains('fuck', $dictionary->getProfanities());
+        $this->assertContains('shit', $dictionary->getProfanities());
     }
 
-    public function test_multi_language_configuration_is_cached()
+    public function test_block_list_adds_words()
     {
-        $languageData = [
-            'english' => [
-                'profanities' => ['test'],
-                'false_positives' => ['pass']
-            ]
-        ];
-        
-        // Load configuration first time
-        $config1 = $this->loader->loadMultiLanguage($languageData);
-        
-        // Load configuration second time - should come from cache
-        $config2 = $this->loader->loadMultiLanguage($languageData);
-        
-        $this->assertEquals($config1->getProfanities(), $config2->getProfanities());
-        $this->assertEquals($config1->getAvailableLanguages(), $config2->getAvailableLanguages());
+        $dictionary = Dictionary::forLanguage('english', ['block' => ['customword']]);
+
+        $this->assertContains('customword', $dictionary->getProfanities());
     }
 
-    public function test_different_configurations_have_different_cache_keys()
+    public function test_severity_map_is_populated()
     {
-        $config1 = $this->loader->load(['prof1'], ['false1']);
-        $config2 = $this->loader->load(['prof2'], ['false2']);
-        
-        $this->assertNotEquals($config1->getCacheKey(), $config2->getCacheKey());
+        $dictionary = Dictionary::forLanguage('english');
+
+        $severity = $dictionary->getSeverity('fuck');
+        $this->assertNotNull($severity);
     }
 
-    public function test_clear_cache_removes_cached_configurations()
+    public function test_clear_cache()
     {
-        // Load and cache a configuration
-        $this->loader->load(['test'], ['false_positive']);
-        
-        // Verify something is cached
-        $this->assertTrue(Cache::has('blasp_cache_keys'));
-        
-        // Clear cache
-        ConfigurationLoader::clearCache();
-        
-        // Verify cache is cleared
+        Dictionary::clearCache();
         $this->assertFalse(Cache::has('blasp_cache_keys'));
     }
 
-    public function test_cache_keys_are_tracked()
+    public function test_get_available_languages()
     {
-        // Load multiple configurations
-        $this->loader->load(['prof1'], ['false1']);
-        $this->loader->load(['prof2'], ['false2']);
-        
-        $this->loader->loadMultiLanguage([
-            'english' => [
-                'profanities' => ['test'],
-                'false_positives' => ['pass']
-            ]
-        ]);
-        
-        // Verify cache keys are tracked
-        $cacheKeys = Cache::get('blasp_cache_keys', []);
-        $this->assertGreaterThan(0, count($cacheKeys));
-        
-        // All tracked keys should exist in cache
-        foreach ($cacheKeys as $key) {
-            $this->assertTrue(Cache::has($key), "Cache key {$key} should exist");
-        }
+        $languages = Dictionary::getAvailableLanguages();
+
+        $this->assertIsArray($languages);
+        $this->assertContains('english', $languages);
+        $this->assertContains('spanish', $languages);
+        $this->assertContains('french', $languages);
+        $this->assertContains('german', $languages);
     }
 
-    public function test_cached_configuration_is_properly_restored()
+    public function test_load_language_config()
     {
-        $originalProfanities = ['original', 'profanities'];
-        $originalFalsePositives = ['original', 'false', 'positives'];
-        
-        // Load and cache configuration
-        $config1 = $this->loader->load($originalProfanities, $originalFalsePositives);
-        
-        // Load same configuration again (should come from cache)
-        $config2 = $this->loader->load($originalProfanities, $originalFalsePositives);
-        
-        // Verify all properties are restored correctly
-        $this->assertEquals($config1->getProfanities(), $config2->getProfanities());
-        $this->assertEquals($config1->getFalsePositives(), $config2->getFalsePositives());
-        $this->assertEquals($config1->getSeparators(), $config2->getSeparators());
-        $this->assertEquals($config1->getSubstitutions(), $config2->getSubstitutions());
+        $config = Dictionary::loadLanguageConfig('english');
+
+        $this->assertIsArray($config);
+        $this->assertArrayHasKey('profanities', $config);
+        $this->assertContains('fuck', $config['profanities']);
     }
 
-    public function test_cached_multi_language_configuration_is_properly_restored()
+    public function test_load_nonexistent_language_config()
     {
-        $languageData = [
-            'english' => [
-                'profanities' => ['bad'],
-                'false_positives' => ['class']
-            ],
-            'spanish' => [
-                'profanities' => ['malo'],
-                'false_positives' => ['clase']
-            ]
-        ];
-        
-        // Load and cache multi-language configuration
-        $config1 = $this->loader->loadMultiLanguage($languageData, 'spanish');
-        
-        // Load same configuration again (should come from cache)
-        $config2 = $this->loader->loadMultiLanguage($languageData, 'spanish');
-        
-        // Verify all properties are restored correctly
-        $this->assertEquals($config1->getCurrentLanguage(), $config2->getCurrentLanguage());
-        $this->assertEquals($config1->getAvailableLanguages(), $config2->getAvailableLanguages());
-        $this->assertEquals($config1->getProfanitiesForLanguage('english'), $config2->getProfanitiesForLanguage('english'));
-        $this->assertEquals($config1->getFalsePositivesForLanguage('spanish'), $config2->getFalsePositivesForLanguage('spanish'));
+        $config = Dictionary::loadLanguageConfig('nonexistent');
+
+        $this->assertIsArray($config);
+        $this->assertEmpty($config['profanities']);
     }
 
-    public function test_expression_generator_is_used()
+    public function test_normalizer_is_set()
     {
-        $mockGenerator = $this->createMock(ExpressionGeneratorInterface::class);
-        $mockGenerator->expects($this->atLeastOnce())
-                      ->method('generateExpressions')
-                      ->willReturn(['test' => '/test/i']);
-        
-        $loader = new ConfigurationLoader($mockGenerator);
-        $config = $loader->load(['test'], []);
-        
-        $this->assertArrayHasKey('test', $config->getProfanityExpressions());
+        $dictionary = Dictionary::forLanguage('english');
+
+        $this->assertNotNull($dictionary->getNormalizer());
     }
 
-    public function test_cache_ttl_is_respected()
+    public function test_separators_and_substitutions_loaded()
     {
-        // This test verifies that cache TTL is set, though we can't easily test expiration
-        // without waiting or mocking time
-        $config = $this->loader->load(['test'], []);
-        
-        // Verify the configuration was cached with some TTL
-        $cacheKeys = Cache::get('blasp_cache_keys', []);
-        $this->assertNotEmpty($cacheKeys);
-        
-        // The actual cached configuration should exist
-        foreach ($cacheKeys as $key) {
-            $this->assertTrue(Cache::has($key));
-        }
-    }
+        $dictionary = Dictionary::forLanguage('english');
 
-    public function test_loader_without_expression_generator_creates_default()
-    {
-        $loader = new ConfigurationLoader();
-        $config = $loader->load(['test'], []);
-        
-        $this->assertInstanceOf(DetectionConfig::class, $config);
-        $this->assertIsArray($config->getProfanityExpressions());
+        $this->assertNotEmpty($dictionary->getSeparators());
+        $this->assertNotEmpty($dictionary->getSubstitutions());
     }
 }

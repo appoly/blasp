@@ -2,16 +2,16 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Normalizers\GermanStringNormalizer;
+use Blaspsoft\Blasp\Core\Normalizers\GermanNormalizer;
 
 class GermanStringNormalizerTest extends TestCase
 {
-    private GermanStringNormalizer $normalizer;
+    private GermanNormalizer $normalizer;
 
     public function setUp(): void
     {
         parent::setUp();
-        $this->normalizer = new GermanStringNormalizer();
+        $this->normalizer = new GermanNormalizer();
     }
 
     public function test_normalize_umlauts()
@@ -41,9 +41,8 @@ class GermanStringNormalizerTest extends TestCase
 
     public function test_normalize_german_profanity_variants()
     {
-        // Test umlaut and ß normalization for profanity detection
         $this->assertEquals('sheisse', $this->normalizer->normalize('scheiße'));
-        $this->assertEquals('arsh', $this->normalizer->normalize('arsch')); // 'sch' becomes 'sh'
+        $this->assertEquals('arsh', $this->normalizer->normalize('arsch'));
         $this->assertEquals('ficken', $this->normalizer->normalize('ficken'));
         $this->assertEquals('maedchen', $this->normalizer->normalize('mädchen'));
     }
