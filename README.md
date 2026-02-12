@@ -229,18 +229,22 @@ Event::listen(ModelProfanityDetected::class, function ($event) {
 
 ## Middleware
 
-Use `CheckProfanity` to filter incoming request fields:
+Use `CheckProfanity` to filter incoming request fields. A `blasp` middleware alias is registered automatically:
 
 ```php
-use Blaspsoft\Blasp\Laravel\Middleware\CheckProfanity;
-
-// Using the class directly
+// Using the short alias (recommended)
 Route::post('/comment', CommentController::class)
-    ->middleware(CheckProfanity::class);
+    ->middleware('blasp');
 
 // With parameters: action, severity
 Route::post('/comment', CommentController::class)
-    ->middleware(CheckProfanity::class . ':sanitize,mild');
+    ->middleware('blasp:sanitize,mild');
+
+// Or using the class directly
+use Blaspsoft\Blasp\Laravel\Middleware\CheckProfanity;
+
+Route::post('/comment', CommentController::class)
+    ->middleware(CheckProfanity::class);
 ```
 
 | Action | Behaviour |
@@ -281,6 +285,37 @@ $request->validate([
     'bio'     => ['required', Profanity::severity(Severity::High)],
     'tagline' => ['required', Profanity::maxScore(50)],
 ]);
+```
+
+## Blade Directive
+
+The `@clean` directive sanitizes and escapes text for safe display in views:
+
+```blade
+<p>@clean($comment->body)</p>
+
+{{-- Equivalent to: {{ app('blasp')->check($comment->body)->clean() }} --}}
+```
+
+Output is HTML-escaped via `e()` for XSS safety.
+
+## Str / Stringable Macros
+
+Blasp registers macros on Laravel's `Str` and `Stringable` classes:
+
+```php
+use Illuminate\Support\Str;
+
+// Static methods
+Str::isProfane('fuck this');        // true
+Str::isProfane('hello');            // false
+Str::cleanProfanity('fuck this');   // '**** this'
+Str::cleanProfanity('hello');       // 'hello'
+
+// Fluent Stringable methods
+Str::of('fuck this')->isProfane();          // true
+Str::of('fuck this')->cleanProfanity();     // Stringable('**** this')
+Str::of('hello')->cleanProfanity()->upper(); // 'HELLO' (chaining works)
 ```
 
 ## Configuration

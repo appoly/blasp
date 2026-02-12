@@ -2,7 +2,10 @@
 
 namespace Blaspsoft\Blasp\Laravel;
 
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
+use Illuminate\Support\Stringable;
 use Blaspsoft\Blasp\Core\Dictionary;
 
 class BlaspServiceProvider extends ServiceProvider
@@ -31,6 +34,9 @@ class BlaspServiceProvider extends ServiceProvider
         }
 
         $this->registerValidationRule();
+        $this->registerMiddlewareAlias();
+        $this->registerBladeDirectives();
+        $this->registerStringMacros();
     }
 
     public function register(): void
@@ -55,5 +61,36 @@ class BlaspServiceProvider extends ServiceProvider
 
             return !$result->isOffensive();
         }, 'The :attribute contains profanity.');
+    }
+
+    protected function registerMiddlewareAlias(): void
+    {
+        $this->app['router']->aliasMiddleware('blasp', Middleware\CheckProfanity::class);
+    }
+
+    protected function registerBladeDirectives(): void
+    {
+        Blade::directive('clean', function (string $expression) {
+            return "<?php echo e(app('blasp')->check({$expression})->clean()); ?>";
+        });
+    }
+
+    protected function registerStringMacros(): void
+    {
+        Str::macro('isProfane', function (string $text): bool {
+            return app('blasp')->check($text)->isOffensive();
+        });
+
+        Str::macro('cleanProfanity', function (string $text): string {
+            return app('blasp')->check($text)->clean();
+        });
+
+        Stringable::macro('isProfane', function (): bool {
+            return app('blasp')->check((string) $this)->isOffensive();
+        });
+
+        Stringable::macro('cleanProfanity', function (): Stringable {
+            return new Stringable(app('blasp')->check((string) $this)->clean());
+        });
     }
 }
