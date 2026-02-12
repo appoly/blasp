@@ -1,6 +1,39 @@
 <?php
 
 return [
+    'severity' => [
+        'mild' => [
+            'damn', 'hell', 'crap', 'arse', 'sucks', 'piss', 'bloody',
+            'bollocks', 'bugger', 'crikey', 'darn', 'heck', 'turd',
+            'puke', 'puuke', 'puuker', 'shat', 'trots', 'vomit',
+            'waysted', 'wuss', 'wuzzie',
+        ],
+        'moderate' => [
+            'ass', 'bitch', 'bastard', 'slut', 'whore', 'douche',
+            'douchebag', 'skank', 'slag', 'tramp', 'tosser', 'wanker',
+            'wanking', 'prick', 'dick', 'knob', 'bellend', 'minger',
+            'git', 'twit', 'dipshit', 'jackass', 'smartass', 'dumbass',
+            'asshole', 'arsehole', 'shag', 'shagger', 'shagging',
+            'hooker', 'hussy', 'floozy', 'tart', 'sissy', 'pansy',
+        ],
+        'high' => [
+            'fuck', 'shit', 'cock', 'pussy', 'cunt', 'twat', 'tit', 'tits',
+            'fucking', 'fucker', 'motherfucker', 'bullshit', 'horseshit',
+            'shithead', 'shithole', 'shitface', 'fuckface', 'fuckhead',
+            'cocksucker', 'asswipe', 'clusterfuck', 'mindfuck',
+            'dumbfuck', 'fuckwit', 'shitbag', 'shitcunt',
+            'thundercunt', 'cum', 'jizz', 'dildo', 'blowjob',
+            'handjob', 'rimjob', 'fellatio', 'cunnilingus',
+        ],
+        'extreme' => [
+            'nigger', 'nigga', 'niggers', 'niggas', 'coon', 'darkie',
+            'kike', 'spic', 'spick', 'wetback', 'chink', 'gook',
+            'paki', 'raghead', 'towelhead', 'sandnigger', 'beaner',
+            'gringo', 'wop', 'dago', 'polack', 'retard', 'retarded',
+            'faggot', 'fag', 'dyke', 'tranny',
+        ],
+    ],
+
     'profanities' => [
         'abbo',
         'abortionist',
