@@ -1,6 +1,6 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel;
+namespace Blaspsoft\Blasp;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
@@ -14,16 +14,16 @@ class BlaspServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../../config/blasp.php' => config_path('blasp.php'),
+                __DIR__ . '/../config/blasp.php' => config_path('blasp.php'),
             ], 'blasp-config');
 
             $this->publishes([
-                __DIR__ . '/../../config/languages' => config_path('languages'),
+                __DIR__ . '/../config/languages' => config_path('languages'),
             ], 'blasp-languages');
 
             $this->publishes([
-                __DIR__ . '/../../config/blasp.php' => config_path('blasp.php'),
-                __DIR__ . '/../../config/languages' => config_path('languages'),
+                __DIR__ . '/../config/blasp.php' => config_path('blasp.php'),
+                __DIR__ . '/../config/languages' => config_path('languages'),
             ], 'blasp');
 
             $this->commands([
@@ -41,7 +41,7 @@ class BlaspServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../../config/blasp.php', 'blasp');
+        $this->mergeConfigFrom(__DIR__ . '/../config/blasp.php', 'blasp');
 
         $this->app->singleton('blasp', function ($app) {
             return new BlaspManager($app);

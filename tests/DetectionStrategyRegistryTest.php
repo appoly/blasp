@@ -2,7 +2,7 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Laravel\BlaspManager;
+use Blaspsoft\Blasp\BlaspManager;
 use Blaspsoft\Blasp\Core\Contracts\DriverInterface;
 use Blaspsoft\Blasp\Core\Dictionary;
 use Blaspsoft\Blasp\Core\Contracts\MaskStrategyInterface;
@@ -69,12 +69,12 @@ class DetectionStrategyRegistryTest extends TestCase
     public function test_manager_creates_pending_check()
     {
         $pending = $this->manager->newPendingCheck();
-        $this->assertInstanceOf(\Blaspsoft\Blasp\Laravel\PendingCheck::class, $pending);
+        $this->assertInstanceOf(\Blaspsoft\Blasp\PendingCheck::class, $pending);
     }
 
     public function test_driver_method_returns_pending_check()
     {
         $pending = $this->manager->driver('regex');
-        $this->assertInstanceOf(\Blaspsoft\Blasp\Laravel\PendingCheck::class, $pending);
+        $this->assertInstanceOf(\Blaspsoft\Blasp\PendingCheck::class, $pending);
     }
 }

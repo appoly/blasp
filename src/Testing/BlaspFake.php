@@ -1,9 +1,9 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel\Testing;
+namespace Blaspsoft\Blasp\Testing;
 
 use Blaspsoft\Blasp\Core\Result;
-use Blaspsoft\Blasp\Laravel\PendingCheck;
+use Blaspsoft\Blasp\PendingCheck;
 use PHPUnit\Framework\Assert;
 
 class BlaspFake

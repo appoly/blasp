@@ -1,6 +1,6 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel;
+namespace Blaspsoft\Blasp;
 
 use Closure;
 use Illuminate\Contracts\Foundation\Application;

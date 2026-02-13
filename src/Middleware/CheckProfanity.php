@@ -1,12 +1,12 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel\Middleware;
+namespace Blaspsoft\Blasp\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Blaspsoft\Blasp\Laravel\BlaspManager;
-use Blaspsoft\Blasp\Laravel\Events\ContentBlocked;
+use Blaspsoft\Blasp\BlaspManager;
+use Blaspsoft\Blasp\Events\ContentBlocked;
 use Blaspsoft\Blasp\Enums\Severity;
 
 class CheckProfanity

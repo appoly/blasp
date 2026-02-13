@@ -45,10 +45,10 @@
   "extra": {
     "laravel": {
       "providers": [
-        "Blaspsoft\\Blasp\\Laravel\\BlaspServiceProvider"
+        "Blaspsoft\\Blasp\\BlaspServiceProvider"
       ],
       "aliases": {
-        "Blasp": "Blaspsoft\\Blasp\\Laravel\\Facade"
+        "Blasp": "Blaspsoft\\Blasp\\Facades\\Blasp"
       }
     }
   }

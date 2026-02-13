@@ -1,10 +1,12 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel;
+namespace Blaspsoft\Blasp\Facades;
 
+use Blaspsoft\Blasp\BlaspManager;
 use Blaspsoft\Blasp\Core\Result;
 use Blaspsoft\Blasp\Enums\Severity;
-use Blaspsoft\Blasp\Laravel\Testing\BlaspFake;
+use Blaspsoft\Blasp\PendingCheck;
+use Blaspsoft\Blasp\Testing\BlaspFake;
 use Closure;
 use Illuminate\Support\Facades\Facade as BaseFacade;
 
@@ -30,9 +32,9 @@ use Illuminate\Support\Facades\Facade as BaseFacade;
  * @method static PendingCheck configure(?array $profanities = null, ?array $falsePositives = null)
  * @method static BlaspManager extend(string $driver, Closure $callback)
  *
- * @see \Blaspsoft\Blasp\Laravel\BlaspManager
+ * @see \Blaspsoft\Blasp\BlaspManager
  */
-class Facade extends BaseFacade
+class Blasp extends BaseFacade
 {
     protected static function getFacadeAccessor(): string
     {

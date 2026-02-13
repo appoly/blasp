@@ -2,7 +2,7 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Laravel\BlaspServiceProvider;
+use Blaspsoft\Blasp\BlaspServiceProvider;
 use Illuminate\Support\Facades\Config;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 

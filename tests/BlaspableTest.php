@@ -3,9 +3,9 @@
 namespace Blaspsoft\Blasp\Tests;
 
 use Blaspsoft\Blasp\Core\Result;
-use Blaspsoft\Blasp\Laravel\Blaspable;
-use Blaspsoft\Blasp\Laravel\Events\ModelProfanityDetected;
-use Blaspsoft\Blasp\Laravel\Exceptions\ProfanityRejectedException;
+use Blaspsoft\Blasp\Blaspable;
+use Blaspsoft\Blasp\Events\ModelProfanityDetected;
+use Blaspsoft\Blasp\Exceptions\ProfanityRejectedException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Event;

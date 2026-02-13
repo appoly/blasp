@@ -114,7 +114,7 @@ class ConfigurationLoaderLanguageTest extends TestCase
         $this->assertArrayHasKey('/z/', $substitutions);
 
         // Verify detection works with merged substitutions
-        $result = \Blaspsoft\Blasp\Laravel\Facade::french()->check('connard');
+        $result = \Blaspsoft\Blasp\Facades\Blasp::french()->check('connard');
         $this->assertTrue($result->isOffensive());
     }
 }

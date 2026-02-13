@@ -1,6 +1,6 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel\Events;
+namespace Blaspsoft\Blasp\Events;
 
 use Blaspsoft\Blasp\Core\Result;
 use Illuminate\Http\Request;

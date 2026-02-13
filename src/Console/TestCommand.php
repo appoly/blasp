@@ -1,6 +1,6 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel\Console;
+namespace Blaspsoft\Blasp\Console;
 
 use Illuminate\Console\Command;
 

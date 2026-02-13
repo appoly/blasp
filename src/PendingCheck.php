@@ -1,6 +1,6 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel;
+namespace Blaspsoft\Blasp;
 
 use Closure;
 use Blaspsoft\Blasp\Core\Analyzer;
@@ -11,7 +11,7 @@ use Blaspsoft\Blasp\Core\Masking\CharacterMask;
 use Blaspsoft\Blasp\Core\Masking\GrawlixMask;
 use Blaspsoft\Blasp\Core\Masking\CallbackMask;
 use Blaspsoft\Blasp\Enums\Severity;
-use Blaspsoft\Blasp\Laravel\Events\ProfanityDetected;
+use Blaspsoft\Blasp\Events\ProfanityDetected;
 
 class PendingCheck
 {

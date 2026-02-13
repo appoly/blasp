@@ -2,7 +2,7 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Laravel\Middleware\CheckProfanity;
+use Blaspsoft\Blasp\Middleware\CheckProfanity;
 
 class MiddlewareAliasTest extends TestCase
 {

@@ -2,7 +2,7 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Laravel\Facade as Blasp;
+use Blaspsoft\Blasp\Facades\Blasp;
 
 class BlaspCheckTest extends TestCase
 {

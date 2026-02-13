@@ -3,7 +3,7 @@
 namespace Blaspsoft\Blasp\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use Blaspsoft\Blasp\Laravel\Facade as Blasp;
+use Blaspsoft\Blasp\Facades\Blasp;
 
 class Issue32FalsePositiveTest extends TestCase
 {

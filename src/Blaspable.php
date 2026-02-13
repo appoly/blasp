@@ -1,11 +1,11 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel;
+namespace Blaspsoft\Blasp;
 
 use Closure;
 use Blaspsoft\Blasp\Core\Result;
-use Blaspsoft\Blasp\Laravel\Events\ModelProfanityDetected;
-use Blaspsoft\Blasp\Laravel\Exceptions\ProfanityRejectedException;
+use Blaspsoft\Blasp\Events\ModelProfanityDetected;
+use Blaspsoft\Blasp\Exceptions\ProfanityRejectedException;
 use Illuminate\Database\Eloquent\Model;
 
 /**

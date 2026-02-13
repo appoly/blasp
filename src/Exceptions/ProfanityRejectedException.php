@@ -1,6 +1,6 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel\Exceptions;
+namespace Blaspsoft\Blasp\Exceptions;
 
 use Blaspsoft\Blasp\Core\Result;
 use Illuminate\Database\Eloquent\Model;

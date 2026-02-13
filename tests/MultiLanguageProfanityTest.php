@@ -2,7 +2,7 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Laravel\Facade as Blasp;
+use Blaspsoft\Blasp\Facades\Blasp;
 use Blaspsoft\Blasp\Core\Dictionary;
 
 class MultiLanguageProfanityTest extends TestCase

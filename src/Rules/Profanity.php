@@ -1,6 +1,6 @@
 <?php
 
-namespace Blaspsoft\Blasp\Laravel\Rules;
+namespace Blaspsoft\Blasp\Rules;
 
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
