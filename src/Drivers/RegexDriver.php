@@ -36,8 +36,7 @@ class RegexDriver implements DriverInterface
         uksort($profanityExpressions, fn($a, $b) => strlen($b) - strlen($a));
 
         $normalizer = $dictionary->getNormalizer();
-        $workingCleanString = $text;
-        $normalizedString = $normalizer->normalize($workingCleanString);
+        $normalizedString = $normalizer->normalize($text);
         $originalNormalized = preg_replace('/\s+/', ' ', $normalizedString);
 
         $matchedWords = [];
@@ -48,14 +47,13 @@ class RegexDriver implements DriverInterface
         while ($continue) {
             $continue = false;
             $normalizedString = preg_replace('/\s+/', ' ', $normalizedString);
-            $workingCleanString = preg_replace('/\s+/', ' ', $workingCleanString);
 
             foreach ($profanityExpressions as $profanity => $expression) {
                 preg_match_all($expression, $normalizedString, $matches, PREG_OFFSET_CAPTURE);
 
                 if (!empty($matches[0])) {
                     foreach ($matches[0] as $match) {
-                        $start = $match[1];
+                        $start = mb_strlen(substr($normalizedString, 0, $match[1]), 'UTF-8');
                         $length = mb_strlen($match[0], 'UTF-8');
                         $matchedText = $match[0];
 
@@ -85,12 +83,7 @@ class RegexDriver implements DriverInterface
 
                         $continue = true;
 
-                        // Apply mask
-                        $replacement = $mask->mask($matchedText, $length);
-
-                        $workingCleanString = mb_substr($workingCleanString, 0, $start) . $replacement .
-                            mb_substr($workingCleanString, $start + $length);
-
+                        // Mask in normalizedString only (needed for loop termination)
                         $normalizedString = mb_substr($normalizedString, 0, $start) . str_repeat('*', mb_strlen($match[0], 'UTF-8')) .
                             mb_substr($normalizedString, $start + mb_strlen($match[0], 'UTF-8'));
 
@@ -121,6 +114,17 @@ class RegexDriver implements DriverInterface
                 $matchedWords,
                 fn(MatchedWord $w) => $w->severity->isAtLeast($minimumSeverity)
             ));
+        }
+
+        // Rebuild cleanText from surviving matches (right-to-left)
+        $workingCleanString = $text;
+        $sorted = $matchedWords;
+        usort($sorted, fn($a, $b) => $b->position - $a->position);
+        foreach ($sorted as $word) {
+            $replacement = $mask->mask($word->text, $word->length);
+            $workingCleanString = mb_substr($workingCleanString, 0, $word->position)
+                . $replacement
+                . mb_substr($workingCleanString, $word->position + $word->length);
         }
 
         $totalWords = max(1, str_word_count($text));

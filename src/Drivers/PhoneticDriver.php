@@ -67,11 +67,10 @@ class PhoneticDriver implements DriverInterface
         $tokens = $matches[0] ?? [];
 
         $matchedWords = [];
-        $cleanText = $text;
 
         foreach ($tokens as $token) {
             $word = $token[0];
-            $start = $token[1];
+            $start = mb_strlen(substr($normalized, 0, $token[1]), 'UTF-8');
             $length = mb_strlen($word, 'UTF-8');
 
             // Skip dictionary false positives
@@ -88,9 +87,6 @@ class PhoneticDriver implements DriverInterface
             if ($baseWord === null) {
                 continue;
             }
-
-            $replacement = $mask->mask($word, $length);
-            $cleanText = mb_substr($cleanText, 0, $start) . $replacement . mb_substr($cleanText, $start + $length);
 
             $matchedWords[] = new MatchedWord(
                 text: $word,
@@ -109,6 +105,17 @@ class PhoneticDriver implements DriverInterface
                 $matchedWords,
                 fn(MatchedWord $w) => $w->severity->isAtLeast($minimumSeverity)
             ));
+        }
+
+        // Rebuild cleanText from surviving matches (right-to-left)
+        $cleanText = $text;
+        $sorted = $matchedWords;
+        usort($sorted, fn($a, $b) => $b->position - $a->position);
+        foreach ($sorted as $word) {
+            $replacement = $mask->mask($word->text, $word->length);
+            $cleanText = mb_substr($cleanText, 0, $word->position)
+                . $replacement
+                . mb_substr($cleanText, $word->position + $word->length);
         }
 
         $totalWords = max(1, str_word_count($text));

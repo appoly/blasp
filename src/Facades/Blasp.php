@@ -64,16 +64,18 @@ class Blasp extends BaseFacade
     public static function assertChecked(): void
     {
         $instance = static::getFacadeRoot();
-        if ($instance instanceof BlaspFake) {
-            $instance->assertChecked();
+        if (!$instance instanceof BlaspFake) {
+            throw new \RuntimeException('Blasp::assertChecked() requires Blasp::fake() to be called first.');
         }
+        $instance->assertChecked();
     }
 
     public static function assertCheckedTimes(int $times): void
     {
         $instance = static::getFacadeRoot();
-        if ($instance instanceof BlaspFake) {
-            $instance->assertCheckedTimes($times);
+        if (!$instance instanceof BlaspFake) {
+            throw new \RuntimeException('Blasp::assertCheckedTimes() requires Blasp::fake() to be called first.');
         }
+        $instance->assertCheckedTimes($times);
     }
 }

@@ -12,25 +12,32 @@ class Profanity implements ValidationRule
     protected ?int $maxScore = null;
     protected ?Severity $minimumSeverity = null;
 
-    public static function in(string $language): self
+    public static function make(): self
     {
-        $rule = new self();
-        $rule->language = $language;
-        return $rule;
+        return new self();
     }
 
-    public static function maxScore(int $score): self
+    public function in(string $language): self
     {
-        $rule = new self();
-        $rule->maxScore = $score;
-        return $rule;
+        $this->language = $language;
+        return $this;
     }
 
-    public static function severity(Severity $severity): self
+    public function maxScore(int $score): self
     {
-        $rule = new self();
-        $rule->minimumSeverity = $severity;
-        return $rule;
+        $this->maxScore = $score;
+        return $this;
+    }
+
+    public function severity(Severity $severity): self
+    {
+        $this->minimumSeverity = $severity;
+        return $this;
+    }
+
+    public static function __callStatic(string $name, array $arguments): self
+    {
+        return (new self())->$name(...$arguments);
     }
 
     public function validate(string $attribute, mixed $value, Closure $fail): void

@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 
 class TestCommand extends Command
 {
-    protected $signature = 'blasp:test {text} {--lang= : Language to check against} {--verbose}';
+    protected $signature = 'blasp:test {text} {--lang= : Language to check against} {--detail}';
     protected $description = 'Test profanity detection on a given text';
 
     public function handle(): void
@@ -34,7 +34,7 @@ class TestCommand extends Command
                 ]
             );
 
-            if ($this->option('verbose')) {
+            if ($this->option('detail')) {
                 $this->newLine();
                 $this->info('Matched words:');
                 $rows = [];

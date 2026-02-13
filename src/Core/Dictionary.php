@@ -79,6 +79,18 @@ class Dictionary
 
     public static function forLanguage(string $language, array $options = []): self
     {
+        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $language)) {
+            return new self(
+                profanities: [],
+                falsePositives: [],
+                separators: [],
+                substitutions: [],
+                severityMap: [],
+                normalizer: new EnglishNormalizer(),
+                language: $language,
+            );
+        }
+
         $config = self::loadLanguageConfig($language);
         $globalConfig = self::loadGlobalConfig();
 
@@ -120,6 +132,9 @@ class Dictionary
         $substitutions = $globalConfig['substitutions'] ?? [];
 
         foreach ($languages as $language) {
+            if (!preg_match('/^[a-zA-Z0-9_-]+$/', $language)) {
+                continue;
+            }
             $config = self::loadLanguageConfig($language);
             $allProfanities = array_merge($allProfanities, $config['profanities'] ?? []);
             $allFalsePositives = array_merge($allFalsePositives, $config['false_positives'] ?? []);
@@ -236,6 +251,10 @@ class Dictionary
 
     public static function loadLanguageConfig(string $language): array
     {
+        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $language)) {
+            return ['profanities' => [], 'false_positives' => []];
+        }
+
         $possiblePaths = [
             config_path("languages/{$language}.php"),
             __DIR__ . "/../../config/languages/{$language}.php",

@@ -19,7 +19,6 @@ class PatternDriver implements DriverInterface
         }
 
         $matchedWords = [];
-        $cleanText = $text;
         $lowerText = mb_strtolower($text, 'UTF-8');
         $profanities = $dictionary->getProfanities();
         $falsePositives = array_map('strtolower', $dictionary->getFalsePositives());
@@ -33,7 +32,7 @@ class PatternDriver implements DriverInterface
 
             if (preg_match_all($pattern, $lowerText, $matches, PREG_OFFSET_CAPTURE)) {
                 foreach ($matches[0] as $match) {
-                    $start = $match[1];
+                    $start = mb_strlen(substr($lowerText, 0, $match[1]), 'UTF-8');
                     $length = mb_strlen($match[0], 'UTF-8');
                     $originalMatch = mb_substr($text, $start, $length);
 
@@ -41,9 +40,6 @@ class PatternDriver implements DriverInterface
                     if (in_array($lowerProfanity, $falsePositives)) {
                         continue;
                     }
-
-                    $replacement = $mask->mask($originalMatch, $length);
-                    $cleanText = mb_substr($cleanText, 0, $start) . $replacement . mb_substr($cleanText, $start + $length);
 
                     $matchedWords[] = new MatchedWord(
                         text: $originalMatch,
@@ -64,6 +60,17 @@ class PatternDriver implements DriverInterface
                 $matchedWords,
                 fn(MatchedWord $w) => $w->severity->isAtLeast($minimumSeverity)
             ));
+        }
+
+        // Rebuild cleanText from surviving matches (right-to-left)
+        $cleanText = $text;
+        $sorted = $matchedWords;
+        usort($sorted, fn($a, $b) => $b->position - $a->position);
+        foreach ($sorted as $word) {
+            $replacement = $mask->mask($word->text, $word->length);
+            $cleanText = mb_substr($cleanText, 0, $word->position)
+                . $replacement
+                . mb_substr($cleanText, $word->position + $word->length);
         }
 
         $totalWords = max(1, str_word_count($text));
