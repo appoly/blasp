@@ -17,7 +17,7 @@ Blasp is a powerful, extensible profanity filter for Laravel. Version 4 is a gro
 
 ## Features
 
-- **Driver Architecture** — `regex` (detects obfuscation, substitutions, separators) or `pattern` (fast exact matching). Extend with custom drivers.
+- **Driver Architecture** — `regex` (detects obfuscation, substitutions, separators), `pattern` (fast exact matching), or `phonetic` (catches sound-alike evasions). Extend with custom drivers.
 - **Multi-Language** — English, Spanish, German, French with language-specific normalizers. Check one, many, or all at once.
 - **Severity Scoring** — Words categorised as mild/moderate/high/extreme. Filter by minimum severity and get a 0-100 score.
 - **Masking Strategies** — Character mask (`*`, `#`), grawlix (`!@#$%`), or a custom callback.
@@ -54,7 +54,7 @@ php artisan vendor:publish --tag="blasp-languages"
 ## Quick Start
 
 ```php
-use Blaspsoft\Blasp\Laravel\Facade as Blasp;
+use Blaspsoft\Blasp\Facades\Blasp;
 
 $result = Blasp::check('This is a fucking sentence');
 
@@ -84,8 +84,9 @@ Blasp::german()->check($text);
 Blasp::french()->check($text);
 
 // Driver selection
-Blasp::driver('regex')->check($text);    // Full obfuscation detection (default)
-Blasp::driver('pattern')->check($text);  // Fast exact matching
+Blasp::driver('regex')->check($text);     // Full obfuscation detection (default)
+Blasp::driver('pattern')->check($text);   // Fast exact matching
+Blasp::driver('phonetic')->check($text);  // Sound-alike detection (e.g. "phuck", "sheit")
 
 // Shorthand modes
 Blasp::strict()->check($text);   // Forces regex driver
@@ -149,12 +150,22 @@ The regex driver detects obfuscated profanity:
 
 The pattern driver only detects straight word-boundary matches.
 
+The phonetic driver uses `metaphone()` + Levenshtein distance to catch words that *sound like* profanity but are spelled differently:
+
+| Type | Example | Detected As |
+|------|---------|-------------|
+| Phonetic spelling | `phuck` | `fuck` |
+| Shortened form | `fuk` | `fuck` |
+| Sound-alike | `sheit` | `shit` |
+
+Configure sensitivity in `config/blasp.php` under `drivers.phonetic`. A curated false-positive list prevents common words like "fork", "duck", and "beach" from being flagged.
+
 ## Eloquent Integration
 
 The `Blaspable` trait automatically checks model attributes during save:
 
 ```php
-use Blaspsoft\Blasp\Laravel\Blaspable;
+use Blaspsoft\Blasp\Blaspable;
 
 class Comment extends Model
 {
@@ -194,7 +205,7 @@ class Comment extends Model
 In reject mode, saving a model with profanity throws `ProfanityRejectedException` and the model is not persisted:
 
 ```php
-use Blaspsoft\Blasp\Laravel\Exceptions\ProfanityRejectedException;
+use Blaspsoft\Blasp\Exceptions\ProfanityRejectedException;
 
 try {
     $comment = Comment::create(['body' => 'profane text']);
@@ -218,7 +229,7 @@ Comment::withoutBlaspChecking(function () {
 A `ModelProfanityDetected` event fires whenever profanity is detected on a model attribute (both sanitize and reject modes):
 
 ```php
-use Blaspsoft\Blasp\Laravel\Events\ModelProfanityDetected;
+use Blaspsoft\Blasp\Events\ModelProfanityDetected;
 
 Event::listen(ModelProfanityDetected::class, function ($event) {
     $event->model;     // The model instance
@@ -241,7 +252,7 @@ Route::post('/comment', CommentController::class)
     ->middleware('blasp:sanitize,mild');
 
 // Or using the class directly
-use Blaspsoft\Blasp\Laravel\Middleware\CheckProfanity;
+use Blaspsoft\Blasp\Middleware\CheckProfanity;
 
 Route::post('/comment', CommentController::class)
     ->middleware(CheckProfanity::class);
@@ -277,7 +288,7 @@ $request->validate([
 ### Fluent Rule Object
 
 ```php
-use Blaspsoft\Blasp\Laravel\Rules\Profanity;
+use Blaspsoft\Blasp\Rules\Profanity;
 use Blaspsoft\Blasp\Enums\Severity;
 
 $request->validate([
@@ -324,7 +335,7 @@ Full `config/blasp.php` reference:
 
 ```php
 return [
-    'default'   => env('BLASP_DRIVER', 'regex'),       // 'regex' | 'pattern'
+    'default'   => env('BLASP_DRIVER', 'regex'),       // 'regex' | 'pattern' | 'phonetic'
     'language'  => env('BLASP_LANGUAGE', 'english'),    // Default language
     'mask'      => '*',                                 // Default mask character
     'severity'  => 'mild',                              // Minimum severity
@@ -345,6 +356,16 @@ return [
 
     'model' => [
         'mode' => env('BLASP_MODEL_MODE', 'sanitize'),  // 'sanitize' | 'reject'
+    ],
+
+    'drivers' => [
+        'phonetic' => [
+            'phonemes' => 4,                       // metaphone code length (2-8)
+            'min_word_length' => 3,                // skip short words
+            'max_distance_ratio' => 0.6,           // levenshtein threshold (0.3-0.8)
+            'supported_languages' => ['english'],  // metaphone is English-oriented
+            'false_positives' => ['fork', '...'],  // never flag these words
+        ],
     ],
 
     'allow'  => [],    // Global allow-list
@@ -399,7 +420,7 @@ php artisan blasp:languages
 ### Faking
 
 ```php
-use Blaspsoft\Blasp\Laravel\Facade as Blasp;
+use Blaspsoft\Blasp\Facades\Blasp;
 use Blaspsoft\Blasp\Core\Result;
 
 // Replace with a fake — all checks return clean by default
@@ -446,10 +467,10 @@ Enable global events with `'events' => true` in config:
 
 | v3 | v4 |
 |----|-----|
-| `Blaspsoft\Blasp\Facades\Blasp` | `Blaspsoft\Blasp\Laravel\Facade` |
-| `Blaspsoft\Blasp\ServiceProvider` | `Blaspsoft\Blasp\Laravel\BlaspServiceProvider` |
+| `Blaspsoft\Blasp\Facades\Blasp` | `Blaspsoft\Blasp\Facades\Blasp` (unchanged) |
+| `Blaspsoft\Blasp\ServiceProvider` | `Blaspsoft\Blasp\BlaspServiceProvider` |
 
-The Laravel auto-discovery handles provider/alias registration automatically. If you reference the facade directly in code, update the import.
+The Laravel auto-discovery handles provider/alias registration automatically. The facade namespace is the same as v3, so no import changes are needed for the facade.
 
 ### Config Changes
 
