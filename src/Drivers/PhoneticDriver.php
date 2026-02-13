@@ -70,7 +70,9 @@ class PhoneticDriver implements DriverInterface
 
         foreach ($tokens as $token) {
             $word = $token[0];
-            $start = mb_strlen(substr($normalized, 0, $token[1]), 'UTF-8');
+            $byteStart = $token[1];
+            $byteLength = strlen($word);
+            $start = mb_strlen(substr($normalized, 0, $byteStart), 'UTF-8');
             $length = mb_strlen($word, 'UTF-8');
 
             // Skip dictionary false positives
@@ -78,8 +80,8 @@ class PhoneticDriver implements DriverInterface
                 continue;
             }
 
-            // Skip hex/UUID tokens
-            if ($filter->isInsideHexToken($normalized, $start, $length)) {
+            // Skip hex/UUID tokens (filter uses byte-level operations)
+            if ($filter->isInsideHexToken($normalized, $byteStart, $byteLength)) {
                 continue;
             }
 

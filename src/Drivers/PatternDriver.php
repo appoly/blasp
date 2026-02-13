@@ -53,6 +53,18 @@ class PatternDriver implements DriverInterface
             }
         }
 
+        // Deduplicate overlapping matches (longest-first already recorded)
+        usort($matchedWords, fn($a, $b) => $a->position - $b->position);
+        $deduplicated = [];
+        $coveredEnd = -1;
+        foreach ($matchedWords as $mw) {
+            if ($mw->position >= $coveredEnd) {
+                $deduplicated[] = $mw;
+                $coveredEnd = $mw->position + $mw->length;
+            }
+        }
+        $matchedWords = $deduplicated;
+
         // Apply severity filter
         $minimumSeverity = $options['severity'] ?? null;
         if ($minimumSeverity instanceof Severity) {

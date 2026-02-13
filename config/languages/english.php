@@ -1612,8 +1612,6 @@ return [
         'nobles',
         'nobleman',
         'nobility',
-        'knob',
-        'knobs',
         'snob',
         'snobs',
         'snobbish',

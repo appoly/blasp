@@ -53,25 +53,27 @@ class RegexDriver implements DriverInterface
 
                 if (!empty($matches[0])) {
                     foreach ($matches[0] as $match) {
-                        $start = mb_strlen(substr($normalizedString, 0, $match[1]), 'UTF-8');
+                        $byteStart = $match[1];
+                        $byteLength = strlen($match[0]);
+                        $start = mb_strlen(substr($normalizedString, 0, $byteStart), 'UTF-8');
                         $length = mb_strlen($match[0], 'UTF-8');
                         $matchedText = $match[0];
 
-                        // Check word boundary spanning
-                        if ($this->filter->isSpanningWordBoundary($matchedText, $normalizedString, $start)) {
+                        // Check word boundary spanning (filter uses byte-level operations)
+                        if ($this->filter->isSpanningWordBoundary($matchedText, $normalizedString, $byteStart)) {
                             continue;
                         }
 
-                        // Check hex/UUID token
-                        if ($this->filter->isInsideHexToken($normalizedString, $start, $length)) {
+                        // Check hex/UUID token (filter uses byte-level operations)
+                        if ($this->filter->isInsideHexToken($normalizedString, $byteStart, $byteLength)) {
                             continue;
                         }
 
-                        // Full word context for false positive check
-                        $fullWord = $this->filter->getFullWordContext($normalizedString, $start, $length);
+                        // Full word context for false positive check (filter uses byte-level operations)
+                        $fullWord = $this->filter->getFullWordContext($normalizedString, $byteStart, $byteLength);
 
                         // Check pure alpha substring against original (unmasked) normalized
-                        $originalFullWord = $this->filter->getFullWordContext($originalNormalized, $start, $length);
+                        $originalFullWord = $this->filter->getFullWordContext($originalNormalized, $byteStart, $byteLength);
                         if ($this->compoundDetector->isPureAlphaSubstring($matchedText, $originalFullWord, $profanity, $profanityExpressions)) {
                             continue;
                         }
