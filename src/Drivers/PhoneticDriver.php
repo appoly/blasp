@@ -1,0 +1,119 @@
+<?php
+
+namespace Blaspsoft\Blasp\Drivers;
+
+use Blaspsoft\Blasp\Core\Contracts\DriverInterface;
+use Blaspsoft\Blasp\Core\Contracts\MaskStrategyInterface;
+use Blaspsoft\Blasp\Core\Dictionary;
+use Blaspsoft\Blasp\Core\MatchedWord;
+use Blaspsoft\Blasp\Core\Result;
+use Blaspsoft\Blasp\Core\Score;
+use Blaspsoft\Blasp\Core\Matchers\FalsePositiveFilter;
+use Blaspsoft\Blasp\Core\Matchers\PhoneticMatcher;
+use Blaspsoft\Blasp\Enums\Severity;
+
+class PhoneticDriver implements DriverInterface
+{
+    public function __construct(
+        private int $phonemes = 4,
+        private int $minWordLength = 3,
+        private float $maxDistanceRatio = 0.6,
+        private array $phoneticFalsePositives = [],
+        private array $supportedLanguages = ['english'],
+    ) {}
+
+    public function detect(string $text, Dictionary $dictionary, MaskStrategyInterface $mask, array $options = []): Result
+    {
+        if (empty($text)) {
+            return new Result($text ?? '', $text ?? '', [], 0);
+        }
+
+        if (!mb_check_encoding($text, 'UTF-8')) {
+            $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+        }
+
+        // Phonetic matching (metaphone) is English-oriented — skip unsupported languages
+        $language = $dictionary->getLanguage();
+        $languages = array_map('strtolower', explode(',', $language));
+        $supported = array_map('strtolower', $this->supportedLanguages);
+
+        $isSupported = false;
+        foreach ($languages as $lang) {
+            if (in_array(trim($lang), $supported, true)) {
+                $isSupported = true;
+                break;
+            }
+        }
+
+        if (!$isSupported) {
+            return new Result($text, $text, [], 0);
+        }
+
+        $filter = new FalsePositiveFilter($dictionary->getFalsePositives());
+
+        $matcher = new PhoneticMatcher(
+            profanities: $dictionary->getProfanities(),
+            phonemes: $this->phonemes,
+            minWordLength: $this->minWordLength,
+            maxDistanceRatio: $this->maxDistanceRatio,
+            phoneticFalsePositives: $this->phoneticFalsePositives,
+        );
+
+        $normalizer = $dictionary->getNormalizer();
+        $normalized = $normalizer->normalize($text);
+
+        // Tokenize
+        preg_match_all('/\b[\w\']+\b/u', $normalized, $matches, PREG_OFFSET_CAPTURE);
+        $tokens = $matches[0] ?? [];
+
+        $matchedWords = [];
+        $cleanText = $text;
+
+        foreach ($tokens as $token) {
+            $word = $token[0];
+            $start = $token[1];
+            $length = mb_strlen($word, 'UTF-8');
+
+            // Skip dictionary false positives
+            if ($filter->isFalsePositive($word)) {
+                continue;
+            }
+
+            // Skip hex/UUID tokens
+            if ($filter->isInsideHexToken($normalized, $start, $length)) {
+                continue;
+            }
+
+            $baseWord = $matcher->match($word);
+            if ($baseWord === null) {
+                continue;
+            }
+
+            $replacement = $mask->mask($word, $length);
+            $cleanText = mb_substr($cleanText, 0, $start) . $replacement . mb_substr($cleanText, $start + $length);
+
+            $matchedWords[] = new MatchedWord(
+                text: $word,
+                base: $baseWord,
+                severity: $dictionary->getSeverity($baseWord),
+                position: $start,
+                length: $length,
+                language: $dictionary->getLanguage(),
+            );
+        }
+
+        // Apply severity filter
+        $minimumSeverity = $options['severity'] ?? null;
+        if ($minimumSeverity instanceof Severity) {
+            $matchedWords = array_values(array_filter(
+                $matchedWords,
+                fn(MatchedWord $w) => $w->severity->isAtLeast($minimumSeverity)
+            ));
+        }
+
+        $totalWords = max(1, str_word_count($text));
+        $scoreValue = Score::calculate($matchedWords, $totalWords);
+
+        return new Result($text, $cleanText, $matchedWords, $scoreValue);
+    }
+}

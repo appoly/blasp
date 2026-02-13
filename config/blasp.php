@@ -103,6 +103,39 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Driver-Specific Configuration
+    |--------------------------------------------------------------------------
+    */
+    'drivers' => [
+        'phonetic' => [
+            'phonemes' => 4,              // metaphone code length (2-8, lower=more aggressive)
+            'min_word_length' => 3,        // skip words shorter than this
+            'max_distance_ratio' => 0.6,   // levenshtein threshold (0.3-0.8, lower=stricter)
+            'supported_languages' => ['english'],
+            'false_positives' => [
+                'fork', 'forked', 'forking',
+                'beach', 'beaches',
+                'witch', 'witches',
+                'sheet', 'sheets',
+                'deck', 'decks',
+                'count', 'counts', 'counter', 'county',
+                'ship', 'shipped', 'shipping',
+                'duck', 'ducked', 'ducking',
+                'fudge', 'fudging',
+                'buck', 'bucks',
+                'puck', 'pucks',
+                'bass',
+                'mass',
+                'pass', 'passed',
+                'heck',
+                'shoot', 'shot',
+                'what', 'white', 'while', 'whole',
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Character Separators
     |--------------------------------------------------------------------------
     */

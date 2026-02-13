@@ -7,6 +7,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Blaspsoft\Blasp\Core\Contracts\DriverInterface;
 use Blaspsoft\Blasp\Drivers\RegexDriver;
 use Blaspsoft\Blasp\Drivers\PatternDriver;
+use Blaspsoft\Blasp\Drivers\PhoneticDriver;
 use InvalidArgumentException;
 
 class BlaspManager
@@ -56,6 +57,19 @@ class BlaspManager
     public function createPatternDriver(): DriverInterface
     {
         return new PatternDriver();
+    }
+
+    public function createPhoneticDriver(): DriverInterface
+    {
+        $config = $this->app['config']->get('blasp.drivers.phonetic', []);
+
+        return new PhoneticDriver(
+            phonemes: $config['phonemes'] ?? 4,
+            minWordLength: $config['min_word_length'] ?? 3,
+            maxDistanceRatio: $config['max_distance_ratio'] ?? 0.6,
+            phoneticFalsePositives: $config['false_positives'] ?? [],
+            supportedLanguages: $config['supported_languages'] ?? ['english'],
+        );
     }
 
     public function extend(string $driver, Closure $callback): self
