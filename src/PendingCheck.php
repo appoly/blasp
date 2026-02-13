@@ -10,6 +10,7 @@ use Blaspsoft\Blasp\Core\Contracts\MaskStrategyInterface;
 use Blaspsoft\Blasp\Core\Masking\CharacterMask;
 use Blaspsoft\Blasp\Core\Masking\GrawlixMask;
 use Blaspsoft\Blasp\Core\Masking\CallbackMask;
+use Blaspsoft\Blasp\Drivers\PipelineDriver;
 use Blaspsoft\Blasp\Enums\Severity;
 use Blaspsoft\Blasp\Events\ProfanityDetected;
 
@@ -25,6 +26,7 @@ class PendingCheck
     protected ?Severity $minimumSeverity = null;
     protected bool $strictMode = false;
     protected bool $lenientMode = false;
+    protected ?array $pipelineDrivers = null;
 
     public function __construct(BlaspManager $manager)
     {
@@ -92,6 +94,12 @@ class PendingCheck
     {
         $this->lenientMode = true;
         $this->strictMode = false;
+        return $this;
+    }
+
+    public function pipeline(string ...$drivers): self
+    {
+        $this->pipelineDrivers = $drivers;
         return $this;
     }
 
@@ -208,6 +216,15 @@ class PendingCheck
 
     protected function resolveDriver(): \Blaspsoft\Blasp\Core\Contracts\DriverInterface
     {
+        if ($this->pipelineDrivers !== null) {
+            $resolved = array_map(
+                fn (string $name) => $this->manager->resolveDriver($name),
+                $this->pipelineDrivers,
+            );
+
+            return new PipelineDriver($resolved);
+        }
+
         $driverName = $this->driverName ?? $this->manager->getDefaultDriver();
 
         if ($this->lenientMode) {

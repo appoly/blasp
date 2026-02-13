@@ -8,6 +8,7 @@ use Blaspsoft\Blasp\Core\Contracts\DriverInterface;
 use Blaspsoft\Blasp\Drivers\RegexDriver;
 use Blaspsoft\Blasp\Drivers\PatternDriver;
 use Blaspsoft\Blasp\Drivers\PhoneticDriver;
+use Blaspsoft\Blasp\Drivers\PipelineDriver;
 use InvalidArgumentException;
 
 class BlaspManager
@@ -72,6 +73,19 @@ class BlaspManager
         );
     }
 
+    public function createPipelineDriver(): DriverInterface
+    {
+        $config = $this->app['config']->get('blasp.drivers.pipeline', []);
+        $driverNames = $config['drivers'] ?? ['regex', 'phonetic'];
+
+        $resolvedDrivers = array_map(
+            fn (string $name) => $this->resolveDriver($name),
+            $driverNames,
+        );
+
+        return new PipelineDriver($resolvedDrivers);
+    }
+
     public function extend(string $driver, Closure $callback): self
     {
         $this->customCreators[$driver] = $callback;
@@ -86,6 +100,11 @@ class BlaspManager
     public function newPendingCheck(): PendingCheck
     {
         return new PendingCheck($this);
+    }
+
+    public function pipeline(string ...$drivers): PendingCheck
+    {
+        return $this->newPendingCheck()->pipeline(...$drivers);
     }
 
     // --- Shortcut methods that create PendingCheck ---

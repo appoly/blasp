@@ -107,6 +107,10 @@ return [
     |--------------------------------------------------------------------------
     */
     'drivers' => [
+        'pipeline' => [
+            'drivers' => ['regex', 'phonetic'],
+        ],
+
         'phonetic' => [
             'phonemes' => 4,              // metaphone code length (2-8, lower=more aggressive)
             'min_word_length' => 3,        // skip words shorter than this

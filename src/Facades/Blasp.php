@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Facade as BaseFacade;
  * @method static PendingCheck strict()
  * @method static PendingCheck lenient()
  * @method static PendingCheck driver(string $driver)
+ * @method static PendingCheck pipeline(string ...$drivers)
  * @method static PendingCheck english()
  * @method static PendingCheck spanish()
  * @method static PendingCheck german()
