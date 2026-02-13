@@ -25,6 +25,12 @@ return [
             'cul', 'culs', 'trou du cul', 'trou de balle',
             'cochon', 'cochons', 'cochonne', 'cochonnes',
         ],
+        'high' => [
+            'merde', 'putain', 'enculé', 'encule',
+            'niquer', 'nique', 'baiser', 'baise',
+            'foutre', 'foutu', 'foutue', 'chier',
+            'bite', 'pute', 'fils de pute',
+        ],
         'extreme' => [
             'pédé', 'pede', 'pédés', 'pedes',
             'pédéraste', 'pederaste', 'pédérastes', 'pederastes',
@@ -1530,6 +1536,11 @@ return [
         'refrigeration',
         'réfrigérations',
         'refrigerations',
+        'zut',
+        'mince',
+        'flûte',
+        'flute',
+        'punaise',
     ],
     
     'false_positives' => [

@@ -18,6 +18,12 @@ return [
             'culo', 'ojete', 'putilla', 'putita',
             'capullo', 'coñazo', 'conazo', 'putada',
         ],
+        'high' => [
+            'mierda', 'joder', 'coño', 'puta', 'puto',
+            'chingar', 'chingado', 'chingada', 'pinche',
+            'verga', 'follar', 'follada', 'follando',
+            'hijo de puta', 'hijoputa', 'concha', 'cojones',
+        ],
         'extreme' => [
             'maricón', 'maricon', 'marica', 'maricona', 'mariconazo',
             'tortillera', 'bollera',

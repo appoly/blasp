@@ -20,6 +20,12 @@ return [
             'schwanz', 'pimmel',
             'hintern', 'po', 'popo',
         ],
+        'high' => [
+            'scheiße', 'scheisse', 'ficken', 'fick', 'gefickt',
+            'verfickt', 'fotze', 'muschi', 'möse', 'moese',
+            'hurensohn', 'hurenkind', 'arschficker',
+            'vögeln', 'voegeln', 'bumsen',
+        ],
         'extreme' => [
             'schwul', 'schwuler', 'schwule', 'schwules',
             'tunte', 'tuntig',
@@ -1045,6 +1051,19 @@ return [
         'platte',
         'platter',
         'plattes',
+        'depp',
+        'trottel',
+        'idiot',
+        'vollidiot',
+        'kanake',
+        'kanaken',
+        'neger',
+        'negerin',
+        'zigeuner',
+        'zigeunerin',
+        'retardiert',
+        'retardierte',
+        'retardierter',
     ],
     
     'false_positives' => [
