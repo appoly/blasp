@@ -325,6 +325,15 @@ class Dictionary
         }
 
         $cache->forget('blasp_cache_keys');
+
+        // Also clear result cache keys
+        $resultKeys = $cache->get('blasp_result_cache_keys', []);
+
+        foreach ($resultKeys as $key) {
+            $cache->forget($key);
+        }
+
+        $cache->forget('blasp_result_cache_keys');
     }
 
     private static function getCache(): \Illuminate\Contracts\Cache\Repository

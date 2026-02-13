@@ -1,6 +1,41 @@
 <?php
 
 return [
+    'severity' => [
+        'mild' => [
+            'crotte', 'crottes', 'caca', 'cacas', 'zut',
+            'mince', 'flûte', 'flute', 'punaise',
+            'idiot', 'idiots', 'idiote', 'idiotes',
+            'bête', 'bete', 'bêtes', 'betes',
+            'sot', 'sots', 'sotte', 'sottes',
+            'niais', 'niaise', 'niaises',
+            'ballot', 'ballots', 'andouille', 'andouilles',
+        ],
+        'moderate' => [
+            'connard', 'connarde', 'con', 'conne',
+            'salaud', 'salope', 'garce', 'garces',
+            'pétasse', 'petasse', 'pétasses', 'petasses',
+            'bâtard', 'batard', 'bâtards', 'batards',
+            'bâtarde', 'batarde', 'bâtardes', 'batardes',
+            'abruti', 'abrutis', 'abrutie', 'abruties',
+            'crétin', 'cretin', 'crétins', 'cretins',
+            'crétine', 'cretine', 'crétines', 'cretines',
+            'débile', 'debile', 'débiles', 'debiles',
+            'imbécile', 'imbecile', 'imbéciles', 'imbeciles',
+            'cul', 'culs', 'trou du cul', 'trou de balle',
+            'cochon', 'cochons', 'cochonne', 'cochonnes',
+        ],
+        'extreme' => [
+            'pédé', 'pede', 'pédés', 'pedes',
+            'pédéraste', 'pederaste', 'pédérastes', 'pederastes',
+            'tapette', 'tapettes', 'tantouze', 'tantouzes',
+            'fiotte', 'fiottes', 'tarlouze', 'tarlouzes',
+            'gouine', 'gouines',
+            'attardé', 'attarde', 'attardés', 'attardes',
+            'attardée', 'attardee', 'attardées', 'attardees',
+        ],
+    ],
+
     'profanities' => [
         // Common French profanities and vulgar expressions
         'merde',

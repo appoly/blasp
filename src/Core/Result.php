@@ -114,6 +114,28 @@ class Result implements JsonSerializable, Stringable, Countable
         return new self($text, $text, [], 0);
     }
 
+    public static function fromArray(array $data): self
+    {
+        $matchedWords = [];
+        foreach ($data['words'] ?? [] as $wordData) {
+            $matchedWords[] = new MatchedWord(
+                text: $wordData['text'],
+                base: $wordData['base'],
+                severity: Severity::tryFrom($wordData['severity']) ?? Severity::High,
+                position: $wordData['position'],
+                length: $wordData['length'],
+                language: $wordData['language'] ?? 'english',
+            );
+        }
+
+        return new self(
+            $data['original'] ?? '',
+            $data['clean'] ?? '',
+            $matchedWords,
+            $data['score'] ?? 0,
+        );
+    }
+
     public static function withMatches(array $words, string $originalText = '', string $cleanText = ''): self
     {
         $matchedWords = [];

@@ -19,6 +19,7 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Config::set('cache.default', 'array');
         Config::set('blasp.separators', config('blasp.separators'));
         Config::set('blasp.profanities', config('blasp.profanities'));
         Config::set('blasp.false_positives', config('blasp.false_positives', []));

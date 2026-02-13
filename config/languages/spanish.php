@@ -1,6 +1,31 @@
 <?php
 
 return [
+    'severity' => [
+        'mild' => [
+            'maldito', 'maldita', 'maldición', 'maldicion', 'carajo',
+            'hostia', 'hostias', 'jolines', 'joline', 'jobar', 'joroba',
+            'caca', 'mear', 'meada', 'peo', 'pedorro', 'pedorra', 'pedos',
+            'tonto', 'tonta', 'bobo', 'boba', 'baboso', 'babosa',
+            'cursi', 'pesado', 'pesada', 'latoso', 'latosa',
+        ],
+        'moderate' => [
+            'cabrón', 'cabron', 'cabrona', 'cabrones', 'cabronazo',
+            'perra', 'zorra', 'gilipollas', 'gilipolla',
+            'imbécil', 'imbecil', 'idiota', 'estúpido', 'estupido', 'estúpida', 'estupida',
+            'pendejo', 'pendeja', 'mamón', 'mamon',
+            'boludo', 'boluda', 'pelotudo', 'pelotuda',
+            'culo', 'ojete', 'putilla', 'putita',
+            'capullo', 'coñazo', 'conazo', 'putada',
+        ],
+        'extreme' => [
+            'maricón', 'maricon', 'marica', 'maricona', 'mariconazo',
+            'tortillera', 'bollera',
+            'retrasado', 'retrasada', 'retardado', 'retardada',
+            'mongoloide', 'subnormal',
+        ],
+    ],
+
     'profanities' => [
         // Common Spanish profanities and vulgar expressions
         'mierda',

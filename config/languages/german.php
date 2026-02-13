@@ -1,6 +1,36 @@
 <?php
 
 return [
+    'severity' => [
+        'mild' => [
+            'mist', 'kacke', 'verdammt', 'verdammte', 'verdammter', 'verdammtes',
+            'blöd', 'bloed', 'blöde', 'bloede', 'blöder', 'bloeder', 'blödes', 'bloedes',
+            'doof', 'doofe', 'doofer', 'doofes',
+            'dumm', 'dumme', 'dummer', 'dummes',
+            'albern', 'alberne', 'alberner', 'albernes',
+            'peinlich', 'peinliche', 'peinlicher', 'peinliches',
+        ],
+        'moderate' => [
+            'arsch', 'arschloch', 'arschlöcher', 'arschlocher',
+            'schlampe', 'nutte', 'hure',
+            'wichser', 'depp', 'trottel',
+            'idiot', 'vollidiot',
+            'bescheuert', 'bescheuerte', 'bescheuerter', 'bescheuertes',
+            'bekloppt', 'bekloppte', 'bekloppter', 'beklopptes',
+            'schwanz', 'pimmel',
+            'hintern', 'po', 'popo',
+        ],
+        'extreme' => [
+            'schwul', 'schwuler', 'schwule', 'schwules',
+            'tunte', 'tuntig',
+            'kampflesbe', 'kampflesben',
+            'kanake', 'kanaken',
+            'neger', 'negerin',
+            'zigeuner', 'zigeunerin',
+            'retardiert', 'retardierte', 'retardierter',
+        ],
+    ],
+
     'profanities' => [
         // Common German profanities and vulgar expressions
         'scheiße',

@@ -13,6 +13,7 @@ use Blaspsoft\Blasp\Core\Masking\CallbackMask;
 use Blaspsoft\Blasp\Drivers\PipelineDriver;
 use Blaspsoft\Blasp\Enums\Severity;
 use Blaspsoft\Blasp\Events\ProfanityDetected;
+use Illuminate\Support\Facades\Cache;
 
 class PendingCheck
 {
@@ -161,6 +162,29 @@ class PendingCheck
     {
         $text = $text ?? '';
 
+        if ($this->shouldCache()) {
+            $cacheKey = $this->buildCacheKey($text);
+            $cache = $this->getCache();
+            $ttl = config('blasp.cache.ttl', 86400);
+
+            $cached = $cache->get($cacheKey);
+            if ($cached !== null) {
+                return Result::fromArray($cached);
+            }
+
+            $result = $this->performCheck($text);
+
+            $cache->put($cacheKey, $result->toArray(), $ttl);
+            $this->trackCacheKey($cacheKey);
+
+            return $result;
+        }
+
+        return $this->performCheck($text);
+    }
+
+    protected function performCheck(string $text): Result
+    {
         $dictionary = $this->buildDictionary();
         $driver = $this->resolveDriver();
         $mask = $this->resolveMask();
@@ -242,5 +266,58 @@ class PendingCheck
 
         $maskConfig = config('blasp.mask', config('blasp.mask_character', '*'));
         return new CharacterMask($maskConfig);
+    }
+
+    // --- Caching ---
+
+    protected function shouldCache(): bool
+    {
+        if (!config('blasp.cache.enabled', true)) {
+            return false;
+        }
+
+        if (!config('blasp.cache.results', true)) {
+            return false;
+        }
+
+        if ($this->maskStrategy instanceof CallbackMask) {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function buildCacheKey(string $text): string
+    {
+        $parts = [
+            'text' => $text,
+            'driver' => $this->driverName ?? config('blasp.default', 'regex'),
+            'pipeline' => $this->pipelineDrivers,
+            'languages' => $this->languages,
+            'all_languages' => $this->allLanguages,
+            'allow' => $this->allowList,
+            'block' => $this->blockList,
+            'severity' => $this->minimumSeverity?->value,
+            'strict' => $this->strictMode,
+            'lenient' => $this->lenientMode,
+            'mask' => $this->maskStrategy ? serialize($this->maskStrategy) : null,
+        ];
+
+        return 'blasp_result_' . md5(serialize($parts));
+    }
+
+    protected function getCache(): \Illuminate\Contracts\Cache\Repository
+    {
+        $driver = config('blasp.cache.driver', config('blasp.cache_driver'));
+
+        return $driver !== null ? Cache::store($driver) : Cache::store();
+    }
+
+    protected function trackCacheKey(string $key): void
+    {
+        $cache = $this->getCache();
+        $keys = $cache->get('blasp_result_cache_keys', []);
+        $keys[] = $key;
+        $cache->forever('blasp_result_cache_keys', array_unique($keys));
     }
 }

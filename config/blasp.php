@@ -70,6 +70,7 @@ return [
         'enabled' => true,
         'driver' => env('BLASP_CACHE_DRIVER'),
         'ttl' => 86400,
+        'results' => true,
     ],
 
     // Backward compat alias

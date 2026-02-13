@@ -17,7 +17,7 @@ Blasp is a powerful, extensible profanity filter for Laravel. Version 4 is a gro
 
 ## Features
 
-- **Driver Architecture** — `regex` (detects obfuscation, substitutions, separators), `pattern` (fast exact matching), or `phonetic` (catches sound-alike evasions). Extend with custom drivers.
+- **Driver Architecture** — `regex` (detects obfuscation, substitutions, separators), `pattern` (fast exact matching), `phonetic` (catches sound-alike evasions), or `pipeline` (chains multiple drivers together). Extend with custom drivers.
 - **Multi-Language** — English, Spanish, German, French with language-specific normalizers. Check one, many, or all at once.
 - **Severity Scoring** — Words categorised as mild/moderate/high/extreme. Filter by minimum severity and get a 0-100 score.
 - **Masking Strategies** — Character mask (`*`, `#`), grawlix (`!@#$%`), or a custom callback.
@@ -87,6 +87,11 @@ Blasp::french()->check($text);
 Blasp::driver('regex')->check($text);     // Full obfuscation detection (default)
 Blasp::driver('pattern')->check($text);   // Fast exact matching
 Blasp::driver('phonetic')->check($text);  // Sound-alike detection (e.g. "phuck", "sheit")
+Blasp::driver('pipeline')->check($text);  // Chain multiple drivers (config-based)
+
+// Ad-hoc pipeline — chain any drivers without config
+Blasp::pipeline('regex', 'phonetic')->check($text);
+Blasp::pipeline('pattern', 'phonetic')->in('english')->mask('#')->check($text);
 
 // Shorthand modes
 Blasp::strict()->check($text);   // Forces regex driver
@@ -159,6 +164,31 @@ The phonetic driver uses `metaphone()` + Levenshtein distance to catch words tha
 | Sound-alike | `sheit` | `shit` |
 
 Configure sensitivity in `config/blasp.php` under `drivers.phonetic`. A curated false-positive list prevents common words like "fork", "duck", and "beach" from being flagged.
+
+### Pipeline Driver
+
+The pipeline driver chains multiple drivers together so a single `check()` call runs all of them. It uses **union merge** semantics — text is flagged if **any** driver finds a match.
+
+```php
+// Config-based: set 'default' => 'pipeline' or use driver('pipeline')
+Blasp::driver('pipeline')->check('phuck this sh1t');
+
+// Ad-hoc: pick drivers on the fly (no config needed)
+Blasp::pipeline('regex', 'phonetic')->check('phuck this sh1t');
+Blasp::pipeline('regex', 'pattern', 'phonetic')->check($text);
+```
+
+When multiple drivers detect the same word at the same position, duplicates are removed — only the longest match is kept. Masks are applied from the merged result, and the score is recalculated across all matches.
+
+Configure the default sub-drivers in `config/blasp.php`:
+
+```php
+'drivers' => [
+    'pipeline' => [
+        'drivers' => ['regex', 'phonetic'],  // Drivers to chain
+    ],
+],
+```
 
 ## Eloquent Integration
 
@@ -335,7 +365,7 @@ Full `config/blasp.php` reference:
 
 ```php
 return [
-    'default'   => env('BLASP_DRIVER', 'regex'),       // 'regex' | 'pattern' | 'phonetic'
+    'default'   => env('BLASP_DRIVER', 'regex'),       // 'regex' | 'pattern' | 'phonetic' | 'pipeline'
     'language'  => env('BLASP_LANGUAGE', 'english'),    // Default language
     'mask'      => '*',                                 // Default mask character
     'severity'  => 'mild',                              // Minimum severity
@@ -345,6 +375,7 @@ return [
         'enabled' => true,
         'driver'  => env('BLASP_CACHE_DRIVER'),
         'ttl'     => 86400,
+        'results' => true,          // Cache check() results by content hash
     ],
 
     'middleware' => [
@@ -359,6 +390,9 @@ return [
     ],
 
     'drivers' => [
+        'pipeline' => [
+            'drivers' => ['regex', 'phonetic'],    // Sub-drivers to chain
+        ],
         'phonetic' => [
             'phonemes' => 4,                       // metaphone code length (2-8)
             'min_word_length' => 3,                // skip short words
@@ -400,6 +434,41 @@ Blasp::extend('my-driver', fn($app) => new MyDriver());
 
 // Use it
 Blasp::driver('my-driver')->check($text);
+```
+
+## Caching
+
+Blasp caches `check()` results by default. When the same text is checked with the same configuration (language, driver, severity, allow/block lists), the cached result is returned instantly.
+
+```php
+// First call — runs full analysis, caches result
+$result = Blasp::check('some text');
+
+// Second call — returns cached result
+$result = Blasp::check('some text');
+```
+
+Configure caching in `config/blasp.php`:
+
+```php
+'cache' => [
+    'enabled' => true,                      // Master switch for all caching
+    'driver'  => env('BLASP_CACHE_DRIVER'), // null = default cache driver
+    'ttl'     => 86400,                     // Cache lifetime in seconds
+    'results' => true,                      // Cache check() results (disable independently)
+],
+```
+
+Result caching is automatically bypassed when using a `CallbackMask` (closures can't be serialized). Clear both dictionary and result caches with:
+
+```bash
+php artisan blasp:clear
+```
+
+Or programmatically:
+
+```php
+Dictionary::clearCache();
 ```
 
 ## Artisan Commands
