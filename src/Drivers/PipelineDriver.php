@@ -69,7 +69,7 @@ class PipelineDriver implements DriverInterface
         }
 
         // 5. Recalculate score from merged matches
-        $totalWords = max(1, str_word_count($text));
+        $totalWords = max(1, count(preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY)));
         $scoreValue = Score::calculate($kept, $totalWords);
 
         return new Result($text, $cleanText, $kept, $scoreValue);

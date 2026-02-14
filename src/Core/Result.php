@@ -153,7 +153,7 @@ class Result implements JsonSerializable, Stringable, Countable
             }
         }
 
-        $totalWords = max(1, str_word_count($originalText ?: implode(' ', $words)));
+        $totalWords = max(1, count(preg_split('/\s+/u', trim($originalText ?: implode(' ', $words)), -1, PREG_SPLIT_NO_EMPTY)));
         $score = Score::calculate($matchedWords, $totalWords);
 
         return new self($originalText, $cleanText ?: $originalText, $matchedWords, $score);

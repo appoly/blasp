@@ -120,7 +120,7 @@ class PhoneticDriver implements DriverInterface
                 . mb_substr($cleanText, $word->position + $word->length);
         }
 
-        $totalWords = max(1, str_word_count($text));
+        $totalWords = max(1, count(preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY)));
         $scoreValue = Score::calculate($matchedWords, $totalWords);
 
         return new Result($text, $cleanText, $matchedWords, $scoreValue);
