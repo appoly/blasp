@@ -21,7 +21,7 @@ class PatternDriver implements DriverInterface
         $matchedWords = [];
         $lowerText = mb_strtolower($text, 'UTF-8');
         $profanities = $dictionary->getProfanities();
-        $falsePositives = array_map('strtolower', $dictionary->getFalsePositives());
+        $falsePositives = array_map(fn($fp) => mb_strtolower($fp, 'UTF-8'), $dictionary->getFalsePositives());
 
         // Sort profanities by length descending for longest-match-first
         usort($profanities, fn($a, $b) => mb_strlen($b) - mb_strlen($a));
@@ -54,7 +54,7 @@ class PatternDriver implements DriverInterface
         }
 
         // Deduplicate overlapping matches (longest-first already recorded)
-        usort($matchedWords, fn($a, $b) => $a->position - $b->position);
+        usort($matchedWords, fn($a, $b) => $a->position - $b->position ?: $b->length - $a->length);
         $deduplicated = [];
         $coveredEnd = -1;
         foreach ($matchedWords as $mw) {
