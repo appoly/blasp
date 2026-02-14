@@ -90,8 +90,10 @@ class PhoneticDriver implements DriverInterface
                 continue;
             }
 
+            $originalWord = mb_substr($text, $start, $length);
+
             $matchedWords[] = new MatchedWord(
-                text: $word,
+                text: $originalWord,
                 base: $baseWord,
                 severity: $dictionary->getSeverity($baseWord),
                 position: $start,

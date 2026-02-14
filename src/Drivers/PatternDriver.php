@@ -18,6 +18,10 @@ class PatternDriver implements DriverInterface
             return new Result($text ?? '', $text ?? '', [], 0);
         }
 
+        if (!mb_check_encoding($text, 'UTF-8')) {
+            $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+        }
+
         $matchedWords = [];
         $lowerText = mb_strtolower($text, 'UTF-8');
         $profanities = $dictionary->getProfanities();
