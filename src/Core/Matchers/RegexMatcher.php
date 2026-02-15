@@ -31,7 +31,7 @@ class RegexMatcher
 
         $pattern = $this->generateEscapedExpression($normalSeparators, self::ESCAPED_SEPARATOR_CHARACTERS);
 
-        return '(?:' . $pattern . '|\.(?=\w)|(?:\s))*?';
+        return '(?:' . $pattern . '|\.(?=\w)|(?:\s)){0,3}';
     }
 
     public function generateSubstitutionExpressions(array $substitutions): array
