@@ -29,9 +29,9 @@ class RegexMatcher
     {
         $normalSeparators = array_filter($separators, fn($sep) => $sep !== '.');
 
-        $pattern = $this->generateEscapedExpression($normalSeparators, self::ESCAPED_SEPARATOR_CHARACTERS);
+        $pattern = $this->generateEscapedExpression($normalSeparators, self::ESCAPED_SEPARATOR_CHARACTERS, '');
 
-        return '(?:' . $pattern . '|\.(?=\w)|(?:\s)){0,3}';
+        return '(?:' . $pattern . '|\.(?=\w)){0,3}?';
     }
 
     public function generateSubstitutionExpressions(array $substitutions): array
