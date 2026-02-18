@@ -2,49 +2,41 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\BlaspService;
+use Blaspsoft\Blasp\Facades\Blasp;
 
 class EmptyInputTest extends TestCase
 {
-    protected $blaspService;
-
-    public function setUp(): void
-    {
-        parent::setUp();
-        $this->blaspService = new BlaspService();
-    }
-
     public function test_empty_string_returns_no_profanity()
     {
-        $result = $this->blaspService->check('');
+        $result = Blasp::check('');
 
-        $this->assertFalse($result->hasProfanity());
-        $this->assertEquals(0, $result->getProfanitiesCount());
-        $this->assertEmpty($result->getUniqueProfanitiesFound());
+        $this->assertFalse($result->isOffensive());
+        $this->assertEquals(0, $result->count());
+        $this->assertEmpty($result->uniqueWords());
     }
 
     public function test_empty_string_returns_empty_source_and_clean_strings()
     {
-        $result = $this->blaspService->check('');
+        $result = Blasp::check('');
 
-        $this->assertEquals('', $result->getSourceString());
-        $this->assertEquals('', $result->getCleanString());
+        $this->assertEquals('', $result->original());
+        $this->assertEquals('', $result->clean());
     }
 
     public function test_null_returns_no_profanity()
     {
-        $result = $this->blaspService->check(null);
+        $result = Blasp::check(null);
 
-        $this->assertFalse($result->hasProfanity());
-        $this->assertEquals('', $result->getSourceString());
-        $this->assertEquals('', $result->getCleanString());
+        $this->assertFalse($result->isOffensive());
+        $this->assertEquals('', $result->original());
+        $this->assertEquals('', $result->clean());
     }
 
     public function test_profanity_still_detected_after_empty_check()
     {
-        $this->blaspService->check('');
-        $result = $this->blaspService->check('shit');
+        Blasp::check('');
+        $result = Blasp::check('shit');
 
-        $this->assertTrue($result->hasProfanity());
+        $this->assertTrue($result->isOffensive());
     }
 }

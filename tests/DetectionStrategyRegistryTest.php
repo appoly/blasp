@@ -2,139 +2,79 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Registries\DetectionStrategyRegistry;
-use Blaspsoft\Blasp\Contracts\DetectionStrategyInterface;
+use Blaspsoft\Blasp\BlaspManager;
+use Blaspsoft\Blasp\Core\Contracts\DriverInterface;
+use Blaspsoft\Blasp\Core\Dictionary;
+use Blaspsoft\Blasp\Core\Contracts\MaskStrategyInterface;
+use Blaspsoft\Blasp\Core\Result;
+use Blaspsoft\Blasp\Drivers\RegexDriver;
+use Blaspsoft\Blasp\Drivers\PatternDriver;
 use InvalidArgumentException;
 
 class DetectionStrategyRegistryTest extends TestCase
 {
-    private DetectionStrategyRegistry $registry;
-    private DetectionStrategyInterface $mockStrategy;
+    private BlaspManager $manager;
 
     public function setUp(): void
     {
         parent::setUp();
-        $this->registry = new DetectionStrategyRegistry();
-        
-        // Create a mock strategy
-        $this->mockStrategy = $this->createMock(DetectionStrategyInterface::class);
-        $this->mockStrategy->method('getName')->willReturn('test_strategy');
-        $this->mockStrategy->method('getPriority')->willReturn(100);
-        $this->mockStrategy->method('canHandle')->willReturn(true);
-        $this->mockStrategy->method('detect')->willReturn([]);
+        $this->manager = app('blasp');
     }
 
-    public function test_can_register_strategy()
+    public function test_default_driver_is_regex()
     {
-        $this->registry->register('test', $this->mockStrategy);
-        
-        $this->assertTrue($this->registry->has('test'));
-        $this->assertSame($this->mockStrategy, $this->registry->get('test'));
+        $this->assertEquals('regex', $this->manager->getDefaultDriver());
     }
 
-    public function test_register_throws_exception_for_invalid_type()
+    public function test_resolve_regex_driver()
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Item must be an instance of DetectionStrategyInterface');
-        
-        $this->registry->register('invalid', 'not_a_strategy');
+        $driver = $this->manager->resolveDriver('regex');
+        $this->assertInstanceOf(RegexDriver::class, $driver);
     }
 
-    public function test_get_throws_exception_for_unknown_strategy()
+    public function test_resolve_pattern_driver()
+    {
+        $driver = $this->manager->resolveDriver('pattern');
+        $this->assertInstanceOf(PatternDriver::class, $driver);
+    }
+
+    public function test_resolve_unknown_driver_throws_exception()
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('No detection strategy registered with key: unknown');
-        
-        $this->registry->get('unknown');
+        $this->manager->resolveDriver('unknown');
     }
 
-    public function test_has_returns_false_for_unknown_strategy()
+    public function test_extend_registers_custom_driver()
     {
-        $this->assertFalse($this->registry->has('unknown'));
+        $this->manager->extend('custom', function ($app) {
+            return new class implements DriverInterface {
+                public function detect(string $text, Dictionary $dictionary, MaskStrategyInterface $mask, array $options = []): Result
+                {
+                    return new Result($text, $text, [], 0);
+                }
+            };
+        });
+
+        $driver = $this->manager->resolveDriver('custom');
+        $this->assertInstanceOf(DriverInterface::class, $driver);
     }
 
-    public function test_all_returns_all_strategies()
+    public function test_manager_check_returns_result()
     {
-        $strategy1 = $this->createMockStrategy('strategy1', 100);
-        $strategy2 = $this->createMockStrategy('strategy2', 200);
-        
-        $this->registry->register('first', $strategy1);
-        $this->registry->register('second', $strategy2);
-        
-        $all = $this->registry->all();
-        $this->assertCount(2, $all);
-        $this->assertSame($strategy1, $all['first']);
-        $this->assertSame($strategy2, $all['second']);
+        $result = $this->manager->check('fuck this');
+        $this->assertInstanceOf(Result::class, $result);
+        $this->assertTrue($result->isOffensive());
     }
 
-    public function test_get_all_by_priority_sorts_correctly()
+    public function test_manager_creates_pending_check()
     {
-        $lowPriority = $this->createMockStrategy('low', 50);
-        $highPriority = $this->createMockStrategy('high', 200);
-        $mediumPriority = $this->createMockStrategy('medium', 100);
-        
-        $this->registry->register('low', $lowPriority);
-        $this->registry->register('high', $highPriority);
-        $this->registry->register('medium', $mediumPriority);
-        
-        $sorted = $this->registry->getAllByPriority();
-        
-        $this->assertCount(3, $sorted);
-        $this->assertSame($highPriority, $sorted[0]);
-        $this->assertSame($mediumPriority, $sorted[1]);
-        $this->assertSame($lowPriority, $sorted[2]);
+        $pending = $this->manager->newPendingCheck();
+        $this->assertInstanceOf(\Blaspsoft\Blasp\PendingCheck::class, $pending);
     }
 
-    public function test_get_applicable_strategies_filters_correctly()
+    public function test_driver_method_returns_pending_check()
     {
-        $canHandle = $this->createMock(DetectionStrategyInterface::class);
-        $canHandle->method('getName')->willReturn('can_handle');
-        $canHandle->method('getPriority')->willReturn(100);
-        $canHandle->method('canHandle')->willReturn(true);
-        $canHandle->method('detect')->willReturn([]);
-        
-        $cannotHandle = $this->createMock(DetectionStrategyInterface::class);
-        $cannotHandle->method('getName')->willReturn('cannot_handle');
-        $cannotHandle->method('getPriority')->willReturn(200);
-        $cannotHandle->method('canHandle')->willReturn(false);
-        $cannotHandle->method('detect')->willReturn([]);
-        
-        $this->registry->register('can', $canHandle);
-        $this->registry->register('cannot', $cannotHandle);
-        
-        $applicable = $this->registry->getApplicableStrategies('test text', ['domain' => 'test']);
-        
-        $this->assertCount(1, $applicable);
-        $this->assertSame($canHandle, $applicable[0]);
-    }
-
-    public function test_remove_strategy()
-    {
-        $this->registry->register('test', $this->mockStrategy);
-        $this->assertTrue($this->registry->has('test'));
-        
-        $this->registry->remove('test');
-        $this->assertFalse($this->registry->has('test'));
-    }
-
-    public function test_case_insensitive_keys()
-    {
-        $this->registry->register('TEST', $this->mockStrategy);
-        
-        $this->assertTrue($this->registry->has('test'));
-        $this->assertTrue($this->registry->has('TEST'));
-        $this->assertSame($this->mockStrategy, $this->registry->get('test'));
-        $this->assertSame($this->mockStrategy, $this->registry->get('TEST'));
-    }
-
-    private function createMockStrategy(string $name, int $priority): DetectionStrategyInterface
-    {
-        $mock = $this->createMock(DetectionStrategyInterface::class);
-        $mock->method('getName')->willReturn($name);
-        $mock->method('getPriority')->willReturn($priority);
-        $mock->method('canHandle')->willReturn(true);
-        $mock->method('detect')->willReturn([]);
-        
-        return $mock;
+        $pending = $this->manager->driver('regex');
+        $this->assertInstanceOf(\Blaspsoft\Blasp\PendingCheck::class, $pending);
     }
 }

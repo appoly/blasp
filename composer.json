@@ -45,7 +45,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "Blaspsoft\\Blasp\\ServiceProvider"
+        "Blaspsoft\\Blasp\\BlaspServiceProvider"
       ],
       "aliases": {
         "Blasp": "Blaspsoft\\Blasp\\Facades\\Blasp"

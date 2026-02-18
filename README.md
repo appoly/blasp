@@ -2,7 +2,7 @@
     <img src="./assets/icon.png" alt="Blasp Icon" width="150" height="150"/>
 </p>
 
-> **🚀 Official API Available!** This package powers [blasp.app](https://blasp.app/) - a universal profanity filtering REST API that works with any language. Free tier with 1,000 requests/month, multi-language support, and custom word lists.
+> **Official API Available!** This package powers [blasp.app](https://blasp.app/) - a universal profanity filtering REST API that works with any language. Free tier with 1,000 requests/month, multi-language support, and custom word lists.
 
 <p align="center">
     <a href="https://github.com/Blaspsoft/blasp/actions/workflows/main.yml"><img alt="GitHub Workflow Status (main)" src="https://github.com/Blaspsoft/blasp/actions/workflows/main.yml/badge.svg"></a>
@@ -13,423 +13,592 @@
 
 # Blasp - Advanced Profanity Filter for Laravel
 
-Blasp is a powerful, extensible profanity filter package for Laravel that helps detect and mask profane words in text. Version 3.0 introduces a simplified API with method chaining, comprehensive multi-language support (English, Spanish, German, French), all-languages detection mode, and advanced caching for enterprise-grade performance.
+Blasp is a powerful, extensible profanity filter for Laravel. Version 4 is a ground-up rewrite with a driver-based architecture, severity scoring, masking strategies, Eloquent model integration, and a clean fluent API.
 
-## ✨ Key Features
+## Features
 
-- **🔗 Method Chaining**: Elegant fluent API with `Blasp::spanish()->check()`
-- **🌍 Multi-Language Support**: English, Spanish, German, and French with language-specific normalizers
-- **🌐 All Languages Mode**: Check against all languages simultaneously with `Blasp::allLanguages()`
-- **🎨 Custom Masking**: Configure custom mask characters with `maskWith()` method
-- **⚡ High Performance**: Advanced caching with O(1) lookups and optimized algorithms
-- **🎯 Smart Detection**: Handles substitutions, separators, variations, and false positives
-- **🏗️ Modern Architecture**: Built on SOLID principles with dependency injection
-- **✅ Battle Tested**: 148 tests with 858 assertions ensuring reliability
+- **Driver Architecture** — `regex` (detects obfuscation, substitutions, separators), `pattern` (fast exact matching), `phonetic` (catches sound-alike evasions), or `pipeline` (chains multiple drivers together). Extend with custom drivers.
+- **Multi-Language** — English, Spanish, German, French with language-specific normalizers. Check one, many, or all at once.
+- **Severity Scoring** — Words categorised as mild/moderate/high/extreme. Filter by minimum severity and get a 0-100 score.
+- **Masking Strategies** — Character mask (`*`, `#`), grawlix (`!@#$%`), or a custom callback.
+- **Eloquent Integration** — `Blaspable` trait auto-sanitizes or rejects profanity on model save.
+- **Middleware** — Reject or sanitize profane request fields with configurable severity.
+- **Validation Rules** — Fluent validation rule with language, severity, and score threshold support.
+- **Testing Utilities** — `Blasp::fake()` for test doubles with assertions.
+- **Events** — `ProfanityDetected`, `ContentBlocked`, and `ModelProfanityDetected`.
+
+## Requirements
+
+- PHP 8.2+
+- Laravel 8.0+
 
 ## Installation
-
-You can install the package via Composer:
 
 ```bash
 composer require blaspsoft/blasp
 ```
 
-## Quick Start
+Publish configuration:
 
-### Basic Usage
+```bash
+# Everything (config + language files)
+php artisan vendor:publish --tag="blasp"
+
+# Config only
+php artisan vendor:publish --tag="blasp-config"
+
+# Language files only
+php artisan vendor:publish --tag="blasp-languages"
+```
+
+## Quick Start
 
 ```php
 use Blaspsoft\Blasp\Facades\Blasp;
 
-// Simple usage - uses default language from config
-$result = Blasp::check('This is a fucking shit sentence');
+$result = Blasp::check('This is a fucking sentence');
 
-// With method chaining for specific language
-$result = Blasp::spanish()->check('esto es una mierda');
-
-// Check against ALL languages at once
-$result = Blasp::allLanguages()->check('fuck merde scheiße mierda');
+$result->isOffensive();  // true
+$result->clean();         // "This is a ******* sentence"
+$result->original();      // "This is a fucking sentence"
+$result->score();         // 30
+$result->count();         // 1
+$result->uniqueWords();   // ['fucking']
+$result->severity();      // Severity::High
 ```
 
-### Simplified API with Method Chaining
+## Fluent API
+
+All builder methods return a `PendingCheck` and can be chained:
 
 ```php
+// Language selection
+Blasp::in('spanish')->check($text);
+Blasp::in('english', 'french')->check($text);
+Blasp::inAllLanguages()->check($text);
+
 // Language shortcuts
 Blasp::english()->check($text);
 Blasp::spanish()->check($text);
 Blasp::german()->check($text);
 Blasp::french()->check($text);
 
-// Check against all languages
-Blasp::allLanguages()->check($text);
+// Driver selection
+Blasp::driver('regex')->check($text);     // Full obfuscation detection (default)
+Blasp::driver('pattern')->check($text);   // Fast exact matching
+Blasp::driver('phonetic')->check($text);  // Sound-alike detection (e.g. "phuck", "sheit")
+Blasp::driver('pipeline')->check($text);  // Chain multiple drivers (config-based)
 
-// Custom mask character
-Blasp::maskWith('#')->check($text);
-Blasp::maskWith('●')->check($text);
+// Ad-hoc pipeline — chain any drivers without config
+Blasp::pipeline('regex', 'phonetic')->check($text);
+Blasp::pipeline('pattern', 'phonetic')->in('english')->mask('#')->check($text);
 
-// Configure custom profanities
-Blasp::configure(['badword'], ['goodword'])->check($text);
+// Shorthand modes
+Blasp::strict()->check($text);   // Forces regex driver
+Blasp::lenient()->check($text);  // Forces pattern driver
 
-// Chain multiple methods together
-Blasp::spanish()->maskWith('*')->check($text);
-Blasp::allLanguages()->maskWith('-')->check($text);
+// Masking
+Blasp::mask('*')->check($text);        // Character mask (default)
+Blasp::mask('#')->check($text);        // Custom character
+Blasp::mask('grawlix')->check($text);  // !@#$% cycling
+Blasp::mask(fn($word, $len) => '[CENSORED]')->check($text);  // Callback
+
+// Severity filtering
+use Blaspsoft\Blasp\Enums\Severity;
+Blasp::withSeverity(Severity::High)->check($text);  // Ignores mild/moderate
+
+// Allow/block lists (merged with config)
+Blasp::allow('damn', 'hell')->check($text);
+Blasp::block('customword')->check($text);
+
+// Chain everything
+Blasp::spanish()
+    ->mask('#')
+    ->withSeverity(Severity::Moderate)
+    ->check($text);
+
+// Batch checking
+$results = Blasp::checkMany(['text one', 'text two']);
 ```
 
-### Working with Results
+## Result Object
+
+The `Result` object is returned by every `check()` call:
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `isOffensive()` | `bool` | Text contains profanity |
+| `isClean()` | `bool` | Text is clean |
+| `clean()` | `string` | Text with profanities masked |
+| `original()` | `string` | Original unmodified text |
+| `score()` | `int` | Severity score (0-100) |
+| `count()` | `int` | Total profanity matches |
+| `uniqueWords()` | `array` | Unique base words detected |
+| `severity()` | `?Severity` | Highest severity in matches |
+| `words()` | `Collection` | `MatchedWord` objects with position, length, severity |
+| `toArray()` | `array` | Full result as array |
+| `toJson()` | `string` | Full result as JSON |
+
+`Result` implements `JsonSerializable`, `Stringable` (returns clean text), and `Countable`.
+
+## Detection Types
+
+The regex driver detects obfuscated profanity:
+
+| Type | Example | Detected As |
+|------|---------|-------------|
+| Straight match | `fucking` | `fucking` |
+| Substitution | `fÛck!ng`, `f4ck` | `fucking`, `fuck` |
+| Separators | `f-u-c-k-i-n-g`, `f@ck` | `fucking`, `fuck` |
+| Doubled | `ffuucckkiinngg` | `fucking` |
+| Combination | `f-uuck!ng` | `fucking` |
+
+> **Separator limit:** The regex driver allows up to 3 separator characters between each letter (e.g., `f--u--c--k`). This covers all realistic obfuscation patterns while keeping regex complexity low enough for PHP-FPM environments.
+
+The pattern driver only detects straight word-boundary matches.
+
+The phonetic driver uses `metaphone()` + Levenshtein distance to catch words that *sound like* profanity but are spelled differently:
+
+| Type | Example | Detected As |
+|------|---------|-------------|
+| Phonetic spelling | `phuck` | `fuck` |
+| Shortened form | `fuk` | `fuck` |
+| Sound-alike | `sheit` | `shit` |
+
+Configure sensitivity in `config/blasp.php` under `drivers.phonetic`. A curated false-positive list prevents common words like "fork", "duck", and "beach" from being flagged.
+
+### Pipeline Driver
+
+The pipeline driver chains multiple drivers together so a single `check()` call runs all of them. It uses **union merge** semantics — text is flagged if **any** driver finds a match.
 
 ```php
-$result = Blasp::check('This is fucking awesome');
+// Config-based: set 'default' => 'pipeline' or use driver('pipeline')
+Blasp::driver('pipeline')->check('phuck this sh1t');
 
-$result->getSourceString();           // "This is fucking awesome"
-$result->getCleanString();            // "This is ******* awesome"
-$result->hasProfanity();             // true
-$result->getProfanitiesCount();      // 1
-$result->getUniqueProfanitiesFound(); // ['fucking']
-
-// With custom mask character
-$result = Blasp::maskWith('#')->check('This is fucking awesome');
-$result->getCleanString();            // "This is ####### awesome"
+// Ad-hoc: pick drivers on the fly (no config needed)
+Blasp::pipeline('regex', 'phonetic')->check('phuck this sh1t');
+Blasp::pipeline('regex', 'pattern', 'phonetic')->check($text);
 ```
 
-### Profanity Detection Types
+When multiple drivers detect the same word at the same position, duplicates are removed — only the longest match is kept. Masks are applied from the merged result, and the score is recalculated across all matches.
 
-Blasp can detect different types of profanities based on variations such as:
-
-1. **Straight match**: Direct matches of profane words.
-2. **Substitution**: Substituted characters (e.g., `pro0fán1ty`).
-3. **Obscured**: Profanities with separators (e.g., `p-r-o-f-a-n-i-t-y`).
-4. **Doubled**: Repeated letters (e.g., `pprrooffaanniittyy`).
-5. **Combination**: Combinations of the above (e.g., `pp-rof@n|tty`).
-
-### Laravel Validation Rule
-
-Blasp also provides a custom Laravel validation rule called `blasp_check`, which you can use to validate form input for profanity.
-
-#### Example
+Configure the default sub-drivers in `config/blasp.php`:
 
 ```php
-$request->merge(['sentence' => 'This is f u c k 1 n g awesome!']);
-
-$validated = $request->validate([
-    'sentence' => ['blasp_check'],
-]);
-
-// With language specification
-$validated = $request->validate([
-    'sentence' => ['blasp_check:spanish'],
-]);
-```
-
-### Configuration
-
-Blasp uses configuration files to manage profanities, separators, and substitutions. The main configuration includes:
-
-```php
-// config/blasp.php
-return [
-    'default_language' => 'english',  // Default language for detection
-    'mask_character' => '*',          // Default character for masking profanities
-    'separators' => [...],            // Special characters used as separators
-    'substitutions' => [...],         // Character substitutions (like @ for a)
-    'false_positives' => [...],       // Words that should not be flagged
-];
-```
-
-You can publish the configuration files:
-
-```bash
-# Publish everything (config + all language files)
-php artisan vendor:publish --tag="blasp"
-
-# Publish only the main configuration file
-php artisan vendor:publish --tag="blasp-config"
-
-# Publish only the language files
-php artisan vendor:publish --tag="blasp-languages"
-```
-
-This will publish:
-
-- `config/blasp.php` - Main configuration with default language settings
-- `config/languages/` - Language-specific profanity lists (English, Spanish, German, French)
-
-### Character Substitutions
-
-Character substitutions (like `@` for `a`, `0` for `o`) are defined in the main `config/blasp.php` file and apply to all languages. The main config includes comprehensive substitutions for accented characters across all supported languages:
-
-```php
-// config/blasp.php
-'substitutions' => [
-    '/a/' => ['a', '4', '@', 'á', 'à', 'â', 'ä', ...],
-    '/c/' => ['c', 'Ç', 'ç', '¢', ...],
-    '/e/' => ['e', '3', '€', 'é', 'è', 'ê', ...],
-    // ... all 26 letters with their variants
+'drivers' => [
+    'pipeline' => [
+        'drivers' => ['regex', 'phonetic'],  // Drivers to chain
+    ],
 ],
 ```
 
-To customize substitutions, modify the main `config/blasp.php` file after publishing.
+## Eloquent Integration
 
-### Custom Configuration
-
-You can specify custom profanity and false positive lists using the `configure()` method:
+The `Blaspable` trait automatically checks model attributes during save:
 
 ```php
-use Blaspsoft\Blasp\Facades\Blasp;
+use Blaspsoft\Blasp\Blaspable;
 
-$blasp = Blasp::configure(
-    profanities: $your_custom_profanities,
-    falsePositives: $your_custom_false_positives
-)->check($text);
+class Comment extends Model
+{
+    use Blaspable;
+
+    protected array $blaspable = ['body', 'title'];
+}
 ```
 
-This is particularly useful when you need different profanity rules for specific contexts, such as username validation.
-
-## 🚀 Advanced Features (v3.0+)
-
-### All Languages Detection
-
-Perfect for international platforms, forums, or any application with multilingual content:
-
 ```php
-// Check text against ALL configured languages at once
-$result = Blasp::allLanguages()->check('fuck merde scheiße mierda');
-// Detects profanities from English, French, German, and Spanish
+// Sanitize mode (default) — profanity is masked, model saves
+$comment = Comment::create(['body' => 'This is fucking great']);
+$comment->body; // "This is ******* great"
 
-// Get detailed results
-echo $result->getProfanitiesCount();        // 4
-echo $result->getUniqueProfanitiesFound();  // ['fuck', 'merde', 'scheiße', 'mierda']
+// Check what happened
+$comment->hadProfanity();            // true
+$comment->blaspResults();            // ['body' => Result, 'title' => Result]
+$comment->blaspResult('body');       // Result instance
 ```
 
-### Multi-Language Support
-
-Blasp includes comprehensive support for multiple languages with automatic character normalization:
-
-- **English**: Full profanity database with common variations
-- **Spanish**: Handles accent normalization (á→a, ñ→n)
-- **German**: Processes umlauts (ä→ae, ö→oe, ü→ue) and ß→ss
-- **French**: Accent and cedilla normalization
-
-### Complete Chainable Methods Reference
+### Per-Model Overrides
 
 ```php
-// Language selection methods
-Blasp::language('spanish')     // Set any language by name
-Blasp::english()               // Shortcut for English
-Blasp::spanish()               // Shortcut for Spanish
-Blasp::german()                // Shortcut for German
-Blasp::french()                // Shortcut for French
-Blasp::allLanguages()          // Check against all languages
+class Comment extends Model
+{
+    use Blaspable;
 
-// Configuration methods
-Blasp::configure($profanities, $falsePositives)  // Custom word lists
-Blasp::maskWith('#')                             // Custom mask character
-
-// Detection method
-Blasp::check($text)            // Analyze text for profanities
-
-// All methods return BlaspService for chaining
-$service = Blasp::spanish()                      // Returns BlaspService
-    ->maskWith('●')                              // Returns BlaspService
-    ->configure(['custom'], ['false_positive'])  // Returns BlaspService
-    ->check('texto para verificar');             // Returns BlaspService with results
+    protected array $blaspable = ['body', 'title'];
+    protected string $blaspMode = 'reject';     // 'sanitize' (default) | 'reject'
+    protected string $blaspLanguage = 'spanish'; // null = config default
+    protected string $blaspMask = '#';           // null = config default
+}
 ```
 
-### Advanced Method Chaining Examples
+### Reject Mode
+
+In reject mode, saving a model with profanity throws `ProfanityRejectedException` and the model is not persisted:
 
 ```php
-// Example 1: Spanish with custom mask
-Blasp::spanish()
-    ->maskWith('#')
-    ->check('esto es una mierda');
-// Result: "esto es una ######"
+use Blaspsoft\Blasp\Exceptions\ProfanityRejectedException;
 
-// Example 2: All languages with custom configuration
-Blasp::allLanguages()
-    ->configure(['newbadword'], ['safephrase'])
-    ->maskWith('-')
-    ->check('multiple fuck merde languages');
-// Result: "multiple ---- ----- languages"
-
-// Example 3: Dynamic language selection
-$language = $user->preferred_language; // 'french'
-Blasp::language($language)
-    ->maskWith($user->mask_preference ?? '*')
-    ->check($userContent);
+try {
+    $comment = Comment::create(['body' => 'profane text']);
+} catch (ProfanityRejectedException $e) {
+    $e->attribute; // 'body'
+    $e->result;    // Result instance
+    $e->model;     // The unsaved model
+}
 ```
 
-### Laravel Integration
+### Disabling Checking
 
 ```php
-// Laravel service container integration
-$blasp = app(BlaspService::class);
+Comment::withoutBlaspChecking(function () {
+    Comment::create(['body' => 'unchecked content']);
+});
+```
 
-// Validation rule with default language
+### Events
+
+A `ModelProfanityDetected` event fires whenever profanity is detected on a model attribute (both sanitize and reject modes):
+
+```php
+use Blaspsoft\Blasp\Events\ModelProfanityDetected;
+
+Event::listen(ModelProfanityDetected::class, function ($event) {
+    $event->model;     // The model instance
+    $event->attribute; // Which attribute had profanity
+    $event->result;    // Result instance
+});
+```
+
+## Middleware
+
+Use `CheckProfanity` to filter incoming request fields. A `blasp` middleware alias is registered automatically:
+
+```php
+// Using the short alias (recommended)
+Route::post('/comment', CommentController::class)
+    ->middleware('blasp');
+
+// With parameters: action, severity
+Route::post('/comment', CommentController::class)
+    ->middleware('blasp:sanitize,mild');
+
+// Or using the class directly
+use Blaspsoft\Blasp\Middleware\CheckProfanity;
+
+Route::post('/comment', CommentController::class)
+    ->middleware(CheckProfanity::class);
+```
+
+| Action | Behaviour |
+|--------|-----------|
+| `reject` (default) | Returns 422 JSON with field errors |
+| `sanitize` | Replaces profane fields in the request and continues |
+
+Configure which fields to check in `config/blasp.php`:
+
+```php
+'middleware' => [
+    'action' => 'reject',
+    'fields' => ['*'],                            // '*' = all fields
+    'except' => ['password', 'email', '_token'],  // Always skipped
+    'severity' => 'mild',
+],
+```
+
+## Validation Rules
+
+### String Rule
+
+```php
 $request->validate([
-    'message' => 'required|blasp_check'
-]);
-
-// Validation rule with specific language
-$request->validate([
-    'message' => 'required|blasp_check:spanish'
+    'comment' => ['required', 'blasp_check'],
+    'bio'     => ['required', 'blasp_check:spanish'],
 ]);
 ```
 
-### Cache Management
+### Fluent Rule Object
 
-Blasp uses Laravel's cache system to improve performance. The package automatically caches profanity expressions and their variations. To clear the cache, you can use the provided Artisan command:
+```php
+use Blaspsoft\Blasp\Rules\Profanity;
+use Blaspsoft\Blasp\Enums\Severity;
+
+$request->validate([
+    'comment' => ['required', Profanity::in('english')],
+    'bio'     => ['required', Profanity::severity(Severity::High)],
+    'tagline' => ['required', Profanity::maxScore(50)],
+]);
+```
+
+## Blade Directive
+
+The `@clean` directive sanitizes and escapes text for safe display in views:
+
+```blade
+<p>@clean($comment->body)</p>
+
+{{-- Equivalent to: {{ app('blasp')->check($comment->body)->clean() }} --}}
+```
+
+Output is HTML-escaped via `e()` for XSS safety.
+
+## Str / Stringable Macros
+
+Blasp registers macros on Laravel's `Str` and `Stringable` classes:
+
+```php
+use Illuminate\Support\Str;
+
+// Static methods
+Str::isProfane('fuck this');        // true
+Str::isProfane('hello');            // false
+Str::cleanProfanity('fuck this');   // '**** this'
+Str::cleanProfanity('hello');       // 'hello'
+
+// Fluent Stringable methods
+Str::of('fuck this')->isProfane();          // true
+Str::of('fuck this')->cleanProfanity();     // Stringable('**** this')
+Str::of('hello')->cleanProfanity()->upper(); // 'HELLO' (chaining works)
+```
+
+## Configuration
+
+Full `config/blasp.php` reference:
+
+```php
+return [
+    'default'   => env('BLASP_DRIVER', 'regex'),       // 'regex' | 'pattern' | 'phonetic' | 'pipeline'
+    'language'  => env('BLASP_LANGUAGE', 'english'),    // Default language
+    'mask'      => '*',                                 // Default mask character
+    'severity'  => 'mild',                              // Minimum severity
+    'events'    => false,                               // Fire ProfanityDetected events
+
+    'cache' => [
+        'enabled' => true,
+        'driver'  => env('BLASP_CACHE_DRIVER'),
+        'ttl'     => 86400,
+        'results' => true,          // Cache check() results by content hash
+    ],
+
+    'middleware' => [
+        'action'   => 'reject',
+        'fields'   => ['*'],
+        'except'   => ['password', 'email', '_token'],
+        'severity' => 'mild',
+    ],
+
+    'model' => [
+        'mode' => env('BLASP_MODEL_MODE', 'sanitize'),  // 'sanitize' | 'reject'
+    ],
+
+    'drivers' => [
+        'pipeline' => [
+            'drivers' => ['regex', 'phonetic'],    // Sub-drivers to chain
+        ],
+        'phonetic' => [
+            'phonemes' => 4,                       // metaphone code length (2-8)
+            'min_word_length' => 3,                // skip short words
+            'max_distance_ratio' => 0.6,           // levenshtein threshold (0.3-0.8)
+            'supported_languages' => ['english'],  // metaphone is English-oriented
+            'false_positives' => ['fork', '...'],  // never flag these words
+        ],
+    ],
+
+    'allow'  => [],    // Global allow-list
+    'block'  => [],    // Global block-list
+
+    'separators'      => [...],  // Characters treated as separators
+    'substitutions'   => [...],  // Character leet-speak mappings
+    'false_positives' => [...],  // Words that should never be flagged
+];
+```
+
+## Custom Drivers
+
+Implement `DriverInterface` and register with the manager:
+
+```php
+use Blaspsoft\Blasp\Core\Contracts\DriverInterface;
+use Blaspsoft\Blasp\Core\Result;
+use Blaspsoft\Blasp\Core\Dictionary;
+use Blaspsoft\Blasp\Core\Contracts\MaskStrategyInterface;
+
+class MyDriver implements DriverInterface
+{
+    public function detect(string $text, Dictionary $dictionary, MaskStrategyInterface $mask, array $options = []): Result
+    {
+        // Your detection logic
+    }
+}
+
+// Register in a service provider
+Blasp::extend('my-driver', fn($app) => new MyDriver());
+
+// Use it
+Blasp::driver('my-driver')->check($text);
+```
+
+## Caching
+
+Blasp caches `check()` results by default. When the same text is checked with the same configuration (language, driver, severity, allow/block lists), the cached result is returned instantly.
+
+```php
+// First call — runs full analysis, caches result
+$result = Blasp::check('some text');
+
+// Second call — returns cached result
+$result = Blasp::check('some text');
+```
+
+Configure caching in `config/blasp.php`:
+
+```php
+'cache' => [
+    'enabled' => true,                      // Master switch for all caching
+    'driver'  => env('BLASP_CACHE_DRIVER'), // null = default cache driver
+    'ttl'     => 86400,                     // Cache lifetime in seconds
+    'results' => true,                      // Cache check() results (disable independently)
+],
+```
+
+Result caching is automatically bypassed when using a `CallbackMask` (closures can't be serialized). Clear both dictionary and result caches with:
 
 ```bash
 php artisan blasp:clear
 ```
 
-This command will clear all cached Blasp expressions and configurations.
-
-### Cache Driver Configuration
-
-By default, Blasp uses Laravel's default cache driver. You can specify a different cache driver for Blasp by setting the `cache_driver` option in your configuration:
+Or programmatically:
 
 ```php
-// config/blasp.php
-return [
-    'cache_driver' => env('BLASP_CACHE_DRIVER'),
-    // ...
-];
+Dictionary::clearCache();
 ```
 
-Or set it via environment variable:
+## Artisan Commands
 
-```env
-BLASP_CACHE_DRIVER=redis
+```bash
+# Clear the profanity cache
+php artisan blasp:clear
+
+# Test text from the command line
+php artisan blasp:test "some text to check" --lang=english --detail
+
+# List available languages with word counts
+php artisan blasp:languages
 ```
 
-This is particularly useful in environments like **Laravel Vapor** where the default cache driver (DynamoDB) has size limits that can be exceeded when caching large profanity expression sets. By configuring a different cache driver (such as Redis), you can avoid these limitations.
+## Testing
 
-## ⚡ Performance
-
-Blasp v3.0 includes significant performance optimizations:
-
-- **Cached Expression Sorting**: Profanity expressions are sorted once and cached, eliminating repeated O(n log n) operations
-- **Hash Map Lookups**: False positive checking and unique profanity tracking use O(1) hash map lookups instead of O(n) linear searches
-- **Optimized Regular Expressions**: Improved regex generation and matching algorithms
-- **Intelligent Caching**: Multi-layer caching system with automatic cache invalidation
-
-### Benchmarks
-
-Version 3.0 shows substantial performance improvements over v2:
-
-- **Expression Processing**: 60% faster profanity expression generation
-- **Detection Speed**: 40% faster text analysis with large profanity lists
-- **Memory Usage**: 30% reduction in memory footprint
-- **Cache Efficiency**: 80% fewer database/config queries with intelligent caching
-
-## 🔄 Migration from v2.x to v3.0
-
-### 100% Backward Compatible
-
-All existing v2.x code continues to work without any changes:
+### Faking
 
 ```php
-// Existing code works exactly the same
 use Blaspsoft\Blasp\Facades\Blasp;
+use Blaspsoft\Blasp\Core\Result;
 
-$result = Blasp::check('text to check');
-$result = Blasp::configure($profanities, $falsePositives)->check('text');
+// Replace with a fake — all checks return clean by default
+Blasp::fake();
+
+// Pre-configure specific responses
+Blasp::fake([
+    'bad text'   => Result::withMatches(['fuck']),
+    'clean text' => Result::none('clean text'),
+]);
+
+$result = Blasp::check('bad text');
+$result->isOffensive(); // true
+
+// Assertions
+Blasp::assertChecked();
+Blasp::assertCheckedTimes(1);
+Blasp::assertCheckedWith('bad text');
 ```
 
-### New Features in v3.0
-
-Take advantage of the simplified API:
+### Disabling Filtering
 
 ```php
-// NEW: Method chaining
-Blasp::spanish()->check($text);
-
-// NEW: All languages detection
-Blasp::allLanguages()->check($text);
-
-// NEW: Language shortcuts
-Blasp::german()->check($text);
-Blasp::french()->check($text);
-
-// NEW: Custom mask characters
-Blasp::maskWith('#')->check($text);
-Blasp::spanish()->maskWith('●')->check($text);
-
-// NEW: Default language configuration
-// Set in config/blasp.php: 'default_language' => 'spanish'
-Blasp::check($text); // Now uses Spanish by default
+Blasp::withoutFiltering(function () {
+    // All checks return clean results
+});
 ```
 
-## 🎨 Custom Masking
+## Events
 
-### Using Custom Mask Characters
+Enable global events with `'events' => true` in config:
 
-You can customize how profanities are masked using the `maskWith()` method:
+| Event | Fired When | Properties |
+|-------|------------|------------|
+| `ProfanityDetected` | `check()` finds profanity | `result`, `originalText` |
+| `ContentBlocked` | Middleware detects profanity | `result`, `request`, `field`, `action` |
+| `ModelProfanityDetected` | Blaspable trait detects profanity | `model`, `attribute`, `result` |
 
-```php
-// Use hash symbols instead of asterisks
-$result = Blasp::maskWith('#')->check('This is fucking awesome');
-echo $result->getCleanString(); // "This is ####### awesome"
+`ModelProfanityDetected` always fires (not gated by the `events` config).
 
-// Use dots for masking
-$result = Blasp::maskWith('·')->check('What the hell');
-echo $result->getCleanString(); // "What the ····"
+## Migrating from v3
 
-// Unicode characters work too
-$result = Blasp::maskWith('●')->check('damn it');
-echo $result->getCleanString(); // "●●●● it"
-```
+### Namespace Changes
 
-### Setting Default Mask Character
+| v3 | v4 |
+|----|-----|
+| `Blaspsoft\Blasp\Facades\Blasp` | `Blaspsoft\Blasp\Facades\Blasp` (unchanged) |
+| `Blaspsoft\Blasp\ServiceProvider` | `Blaspsoft\Blasp\BlaspServiceProvider` |
 
-You can set a default mask character in the configuration:
+The Laravel auto-discovery handles provider/alias registration automatically. The facade namespace is the same as v3, so no import changes are needed for the facade.
 
-```php
-// config/blasp.php
-return [
-    'mask_character' => '#',  // All profanities will be masked with #
-    // ...
-];
-```
+### Config Changes
 
-### Combining with Other Methods
+| v3 Key | v4 Key | Notes |
+|--------|--------|-------|
+| `default_language` | `language` | `default_language` still works as alias |
+| `mask_character` | `mask` | `mask_character` still works as alias |
+| `cache_driver` | `cache.driver` | `cache_driver` still works as alias |
+| — | `default` | New: driver selection (`regex`/`pattern`) |
+| — | `severity` | New: minimum severity level |
+| — | `events` | New: enable global events |
+| — | `allow` / `block` | New: global allow/block lists |
+| — | `middleware` | New: middleware configuration section |
+| — | `model` | New: Blaspable trait configuration |
 
-The `maskWith()` method can be chained with other methods:
+### Result API Changes
 
-```php
-// Spanish text with custom mask
-Blasp::spanish()->maskWith('@')->check('esto es mierda');
+| v3 Method | v4 Method |
+|-----------|-----------|
+| `hasProfanity()` | `isOffensive()` |
+| `getCleanString()` | `clean()` |
+| `getSourceString()` | `original()` |
+| `getProfanitiesCount()` | `count()` |
+| `getUniqueProfanitiesFound()` | `uniqueWords()` |
 
-// All languages with dots
-Blasp::allLanguages()->maskWith('·')->check('multilingual text');
+All v3 methods still work as deprecated aliases.
 
-// Configure and mask
-Blasp::configure(['custom'], [])
-    ->maskWith('-')
-    ->check('custom text');
-```
+### Builder API Changes
 
-## 🏗️ Architecture
+| v3 Method | v4 Method |
+|-----------|-----------|
+| `maskWith($char)` | `mask($char)` |
+| `allLanguages()` | `inAllLanguages()` |
+| `language($lang)` | `in($lang)` |
+| `configure($profanities, $falsePositives)` | `block(...$words)` / `allow(...$words)` |
 
-Blasp v3.0 follows SOLID principles and modern PHP practices:
+All v3 methods still work as deprecated aliases.
 
-- **Facade Pattern**: Simplified API with Laravel facade integration
-- **Builder Pattern**: Method chaining for fluent interface
-- **Strategy Pattern**: Language-specific detection and normalization
-- **Dependency Injection**: Full Laravel service container integration
-- **Caching**: Intelligent performance optimization
+### New in v4
 
-## 📋 Requirements
+- **Driver architecture** — `regex` and `pattern` drivers, custom driver support
+- **Severity system** — Mild/Moderate/High/Extreme levels with scoring
+- **Masking strategies** — Grawlix and callback masking
+- **Blaspable trait** — Automatic Eloquent model profanity checking
+- **Middleware** — Request-level profanity filtering
+- **Fluent validation rule** — `Profanity::in('spanish')->severity(Severity::High)`
+- **Testing utilities** — `Blasp::fake()`, assertions, `withoutFiltering()`
+- **Events** — `ProfanityDetected`, `ContentBlocked`, `ModelProfanityDetected`
+- **Artisan commands** — `blasp:clear`, `blasp:test`, `blasp:languages`
+- **Batch checking** — `Blasp::checkMany([...])`
+- **Multi-language in one call** — `Blasp::in('english', 'spanish')->check($text)`
 
-- PHP 8.1+
-- Laravel 10.0+
-- BCMath PHP Extension (for advanced calculations)
-
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-## 📄 Changelog
+## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 

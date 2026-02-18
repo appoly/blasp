@@ -2,126 +2,80 @@
 
 namespace Blaspsoft\Blasp\Facades;
 
-use Illuminate\Support\Facades\Facade;
-use Blaspsoft\Blasp\BlaspService;
+use Blaspsoft\Blasp\BlaspManager;
+use Blaspsoft\Blasp\Core\Result;
+use Blaspsoft\Blasp\Enums\Severity;
+use Blaspsoft\Blasp\PendingCheck;
+use Blaspsoft\Blasp\Testing\BlaspFake;
+use Closure;
+use Illuminate\Support\Facades\Facade as BaseFacade;
 
 /**
- * @method static \Blaspsoft\Blasp\BlaspService check(?string $string)
- * @method static \Blaspsoft\Blasp\BlaspService configure(?array $profanities = null, ?array $falsePositives = null)
- * @method static \Blaspsoft\Blasp\BlaspService language(string $language)
- * @method static \Blaspsoft\Blasp\BlaspService english()
- * @method static \Blaspsoft\Blasp\BlaspService spanish()
- * @method static \Blaspsoft\Blasp\BlaspService german()
- * @method static \Blaspsoft\Blasp\BlaspService french()
- * @method static \Blaspsoft\Blasp\BlaspService allLanguages()
- * @method static \Blaspsoft\Blasp\BlaspService maskWith(string $character)
- * 
- * @see \Blaspsoft\Blasp\BlaspService
+ * @method static Result check(?string $text)
+ * @method static array checkMany(array $texts)
+ * @method static PendingCheck in(string ...$languages)
+ * @method static PendingCheck inAllLanguages()
+ * @method static PendingCheck mask(string|Closure $mask)
+ * @method static PendingCheck allow(string ...$words)
+ * @method static PendingCheck block(string ...$words)
+ * @method static PendingCheck withSeverity(Severity $severity)
+ * @method static PendingCheck strict()
+ * @method static PendingCheck lenient()
+ * @method static PendingCheck driver(string $driver)
+ * @method static PendingCheck pipeline(string ...$drivers)
+ * @method static PendingCheck english()
+ * @method static PendingCheck spanish()
+ * @method static PendingCheck german()
+ * @method static PendingCheck french()
+ * @method static PendingCheck maskWith(string $character)
+ * @method static PendingCheck allLanguages()
+ * @method static PendingCheck language(string $language)
+ * @method static PendingCheck configure(?array $profanities = null, ?array $falsePositives = null)
+ * @method static BlaspManager extend(string $driver, Closure $callback)
+ *
+ * @see \Blaspsoft\Blasp\BlaspManager
  */
-class Blasp extends Facade
+class Blasp extends BaseFacade
 {
-    /**
-     * Get the registered name of the component.
-     *
-     * @return string
-     */
-    protected static function getFacadeAccessor()
+    protected static function getFacadeAccessor(): string
     {
         return 'blasp';
     }
 
-    /**
-     * Set the language for profanity detection
-     *
-     * @param string $language
-     * @return \Blaspsoft\Blasp\BlaspService
-     */
-    public static function language(string $language): BlaspService
+    public static function fake(array $responses = []): BlaspFake
     {
-        return static::getFacadeRoot()->language($language);
+        $fake = new BlaspFake($responses);
+        static::swap($fake);
+        return $fake;
     }
 
-    /**
-     * Configure profanities and false positives
-     *
-     * @param array|null $profanities
-     * @param array|null $falsePositives
-     * @return \Blaspsoft\Blasp\BlaspService
-     */
-    public static function configure(?array $profanities = null, ?array $falsePositives = null): BlaspService
+    public static function withoutFiltering(Closure $callback): mixed
     {
-        return static::getFacadeRoot()->configure($profanities, $falsePositives);
+        $fake = new BlaspFake();
+        static::swap($fake);
+
+        try {
+            return $callback();
+        } finally {
+            static::clearResolvedInstance('blasp');
+        }
     }
 
-    /**
-     * Set English language (shortcut method)
-     *
-     * @return \Blaspsoft\Blasp\BlaspService
-     */
-    public static function english(): BlaspService
+    public static function assertChecked(): void
     {
-        return static::getFacadeRoot()->english();
+        $instance = static::getFacadeRoot();
+        if (!$instance instanceof BlaspFake) {
+            throw new \RuntimeException('Blasp::assertChecked() requires Blasp::fake() to be called first.');
+        }
+        $instance->assertChecked();
     }
 
-    /**
-     * Set Spanish language (shortcut method)
-     *
-     * @return \Blaspsoft\Blasp\BlaspService
-     */
-    public static function spanish(): BlaspService
+    public static function assertCheckedTimes(int $times): void
     {
-        return static::getFacadeRoot()->spanish();
-    }
-
-    /**
-     * Set German language (shortcut method)
-     *
-     * @return \Blaspsoft\Blasp\BlaspService
-     */
-    public static function german(): BlaspService
-    {
-        return static::getFacadeRoot()->german();
-    }
-
-    /**
-     * Set French language (shortcut method)
-     *
-     * @return \Blaspsoft\Blasp\BlaspService
-     */
-    public static function french(): BlaspService
-    {
-        return static::getFacadeRoot()->french();
-    }
-
-    /**
-     * Enable checking against all available languages
-     *
-     * @return \Blaspsoft\Blasp\BlaspService
-     */
-    public static function allLanguages(): BlaspService
-    {
-        return static::getFacadeRoot()->allLanguages();
-    }
-
-    /**
-     * Set custom mask character for censoring profanities
-     *
-     * @param string $character
-     * @return \Blaspsoft\Blasp\BlaspService
-     */
-    public static function maskWith(string $character): BlaspService
-    {
-        return static::getFacadeRoot()->maskWith($character);
-    }
-
-    /**
-     * Check text for profanity (backwards compatible)
-     *
-     * @param string|null $string
-     * @return \Blaspsoft\Blasp\BlaspService
-     */
-    public static function check(?string $string): BlaspService
-    {
-        return static::getFacadeRoot()->check($string);
+        $instance = static::getFacadeRoot();
+        if (!$instance instanceof BlaspFake) {
+            throw new \RuntimeException('Blasp::assertCheckedTimes() requires Blasp::fake() to be called first.');
+        }
+        $instance->assertCheckedTimes($times);
     }
 }

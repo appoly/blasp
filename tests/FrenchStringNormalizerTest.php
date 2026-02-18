@@ -2,21 +2,20 @@
 
 namespace Blaspsoft\Blasp\Tests;
 
-use Blaspsoft\Blasp\Normalizers\FrenchStringNormalizer;
+use Blaspsoft\Blasp\Core\Normalizers\FrenchNormalizer;
 
 class FrenchStringNormalizerTest extends TestCase
 {
-    private FrenchStringNormalizer $normalizer;
+    private FrenchNormalizer $normalizer;
 
     public function setUp(): void
     {
         parent::setUp();
-        $this->normalizer = new FrenchStringNormalizer();
+        $this->normalizer = new FrenchNormalizer();
     }
 
     public function test_normalize_accented_vowels()
     {
-        // Test various French accents
         $this->assertEquals('ecole eleve', $this->normalizer->normalize('école élève'));
         $this->assertEquals('cafe the', $this->normalizer->normalize('café thé'));
         $this->assertEquals('hotel foret', $this->normalizer->normalize('hôtel forêt'));
@@ -40,7 +39,6 @@ class FrenchStringNormalizerTest extends TestCase
 
     public function test_normalize_french_profanity_variants()
     {
-        // Test common French profanities with accents
         $this->assertEquals('merde', $this->normalizer->normalize('mèrde'));
         $this->assertEquals('encule', $this->normalizer->normalize('enculé'));
         $this->assertEquals('connard', $this->normalizer->normalize('cônnard'));
@@ -116,7 +114,6 @@ class FrenchStringNormalizerTest extends TestCase
 
     public function test_normalize_all_french_accents()
     {
-        // Comprehensive test of all French accented characters
         $accents = [
             'à' => 'a', 'â' => 'a', 'ä' => 'a', 'á' => 'a',
             'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
@@ -126,7 +123,6 @@ class FrenchStringNormalizerTest extends TestCase
             'ý' => 'y', 'ÿ' => 'y',
             'ç' => 'c',
             'œ' => 'oe', 'æ' => 'ae',
-            // Uppercase
             'À' => 'A', 'Â' => 'A', 'Ä' => 'A', 'Á' => 'A',
             'È' => 'E', 'É' => 'E', 'Ê' => 'E', 'Ë' => 'E',
             'Ì' => 'I', 'Í' => 'I', 'Î' => 'I', 'Ï' => 'I',
@@ -148,7 +144,6 @@ class FrenchStringNormalizerTest extends TestCase
 
     public function test_normalize_numbers_and_special_chars()
     {
-        // Test that numbers and special characters are preserved
         $this->assertEquals('123abc', $this->normalizer->normalize('123abc'));
         $this->assertEquals('test!@#$%', $this->normalizer->normalize('test!@#$%'));
         $this->assertEquals('hello_world-2024', $this->normalizer->normalize('hello_world-2024'));
@@ -157,12 +152,10 @@ class FrenchStringNormalizerTest extends TestCase
     public function test_normalize_french_profanities_from_config()
     {
         $config = require __DIR__ . '/../config/languages/french.php';
-        $profanities = array_slice($config['profanities'], 0, 20); // Test subset
-        
+        $profanities = array_slice($config['profanities'], 0, 20);
+
         foreach ($profanities as $profanity) {
             $normalized = $this->normalizer->normalize($profanity);
-            
-            // The normalized version should not contain any French special characters
             $this->assertDoesNotMatchRegularExpression(
                 '/[àâäáèéêëìíîïòóôöùúûüýÿçœæÀÂÄÁÈÉÊËÌÍÎÏÒÓÔÖÙÚÛÜÝŸÇŒÆ]/',
                 $normalized,
