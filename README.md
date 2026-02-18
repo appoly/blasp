@@ -153,6 +153,8 @@ The regex driver detects obfuscated profanity:
 | Doubled | `ffuucckkiinngg` | `fucking` |
 | Combination | `f-uuck!ng` | `fucking` |
 
+> **Separator limit:** The regex driver allows up to 3 separator characters between each letter (e.g., `f--u--c--k`). This covers all realistic obfuscation patterns while keeping regex complexity low enough for PHP-FPM environments.
+
 The pattern driver only detects straight word-boundary matches.
 
 The phonetic driver uses `metaphone()` + Levenshtein distance to catch words that *sound like* profanity but are spelled differently:
@@ -478,7 +480,7 @@ Dictionary::clearCache();
 php artisan blasp:clear
 
 # Test text from the command line
-php artisan blasp:test "some text to check" --lang=english --verbose
+php artisan blasp:test "some text to check" --lang=english --detail
 
 # List available languages with word counts
 php artisan blasp:languages
